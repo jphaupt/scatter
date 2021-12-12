@@ -7,3 +7,4 @@ add_library(
 add_executable(main main.f90)
 
 target_link_libraries(main sut)
+add_dependencies(main jsonfortran)

@@ -6,13 +6,14 @@ git(hub)
 @endtodo
 
 @todo
-different precisions
+You could always just add a note to the readme saying install this thing first since it’s a hack job. Then deal with embedding the lib in the repo later
+spent way too much time on trying to embed it, not worth it!
 @endtodo
 
 @todo
 do a total cross section calculation, since that's relatively easy to do
 (and you've done it before)
-remember: 
+remember:
  - clean code
  - TDD
 keep in mind (maybe do a bit later)

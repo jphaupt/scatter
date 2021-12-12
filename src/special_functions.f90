@@ -15,7 +15,7 @@ contains
         integer, intent(in) :: l
         real(rp), intent(in) :: x
         ! real(rp), intent(out) :: out
-        
+
         if ( l == 0 ) then
             out = j0(x)
         else if (l == 1 ) then
@@ -52,16 +52,16 @@ contains
         else
             out = (2*l-1)*sphericalN(l-1,x)/x - sphericalN(l-2,x)
         end if
-        
+
     end function sphericalN
 
-    pure real(rp) function n0(x) 
+    pure real(rp) function n0(x)
         implicit none
         real(rp), intent(in) :: x
         n0 = -cos(x)/x
     end function n0
 
-    pure real(rp) function n1(x) 
+    pure real(rp) function n1(x)
         implicit none
         real(rp), intent(in) :: x
         n1 = -cos(x)/(x*x) - sin(x)/x
