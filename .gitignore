@@ -1,3 +1,4 @@
 build*/
 doc/
 */*.mod
+.vscode/settings.json
