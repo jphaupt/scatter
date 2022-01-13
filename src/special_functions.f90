@@ -5,7 +5,7 @@ module special_functions
     use precision, only: rp
     implicit none
     private
-    public :: sphericalJ
+    public :: sphericalJ, sphericalN
 contains
     elemental recursive real(rp) function sphericalJ(l, x) result(out)
         !! spherical Bessel function j_l(x)

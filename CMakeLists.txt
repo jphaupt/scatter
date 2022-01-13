@@ -12,12 +12,10 @@ enable_language(Fortran)
 # add_dependencies(FirstTest googletest)
 # target_link_libraries(FirstTest gtest gtest_main pthread)
 
-# TODO make PFUNIT optional (but recommended of course)
+# TODO make PFUNIT and maybe MPI optional (but recommended of course)
 find_package(PFUNIT REQUIRED)
 find_package(MPI REQUIRED)
 find_package ( jsonfortran-${CMAKE_Fortran_COMPILER_ID} 8.2.5 REQUIRED )
-message(STUFF "stuff")
-message(STUFF "${jsonfortran_INCLUDE_DIRS}")
 include_directories ( "${jsonfortran_INCLUDE_DIRS}" )
 enable_testing()
 
@@ -44,5 +42,6 @@ endif()
 # link_directories(${EXTERNAL_INSTALL_LOCATION}/lib)
 
 add_subdirectory(src)
+# target_link_libraries(main jsonfortran-${CMAKE_Fortran_COMPILER_ID})
 # TODO tests
-# add_subdirectory(test)
+add_subdirectory(test)

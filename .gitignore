@@ -1,4 +1,6 @@
 build*/
 doc/
 */*.mod
-.vscode/settings.json
+.vscode/
+.fortls
+.fmod/

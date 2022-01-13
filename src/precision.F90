@@ -10,11 +10,13 @@ module precision
     public :: rp
 
 #ifdef REAL64
-    integer,parameter :: rp = real64
+    integer, parameter :: rp = real64
 #elif REAL128
-    integer,parameter :: rp = real128
+    integer, parameter :: rp = real128
 #else
-    integer,parameter :: rp = real32
+    integer, parameter :: rp = real32
 #endif
+
+contains
 
 end module precision

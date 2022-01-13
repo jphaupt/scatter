@@ -1,0 +1,91 @@
+module test_integrate
+    use potential_type
+    use integrate
+    use precision, only: rp
+    use constants, only: pi
+    use funit
+    implicit none
+
+    ! note: you must go to Testing/Temporary/LastTest.log to get useful output
+    ! or do ctest --output-on-failure
+
+    ! maybe make a tolerance parameter here based on rp
+
+ contains
+
+    ! The following procedure will be called before running
+   ! each test in the suite.
+ @before
+ subroutine set_up()
+    ! type(Harmonic_Potential_t) :: hpot
+ end subroutine set_up
+
+ ! The following procedure will be called after running
+ ! each test in the suite.
+ @after
+ subroutine tear_down()
+    ! integer :: unit
+    ! logical :: exists
+
+    ! inquire(file='test.txt', number=unit, exist=exists)
+    ! if (unit /= -1) then
+    !    close(unit, status='delete')
+    ! elseif (exists) then
+    !    open(newunit=unit, file='test.txt')
+    !    close(unit, status='delete')
+    ! end if
+
+ end subroutine tear_down
+
+    !!! Note: no test annotation !!!
+    subroutine not_a_test()
+       print*,'this procedure should not be called'
+    end subroutine not_a_test
+
+
+    @test
+    subroutine test_assert_true_and_false()
+       @assertTrue(1 == 1)
+       @assertFalse(1 == 2)
+    end subroutine test_assert_true_and_false
+
+    @test
+    subroutine test_numerov_harmonic()
+        ! TODO check tolerances (don't remember how)
+        !! check 1 of page 20 in Thijssen
+        !! for V(r)=r^2, l=0, E=3 should (apparently) give
+        !! r * exp(-r^2/2) * exp(h^2/2)
+        ! wavelength = 2*pi*hbar/sqrt(2*m*E)
+        ! want r1 and r2 to differ by ~wavelength/2
+        ! r1 to be the first integration point past rmax
+        ! hbar^2/2m=1 -> hbar*w=2
+        ! w = 2*pi/wavelength
+        ! wavelength/2 = pi*hbar/sqrt(2*m*E)
+        !              = pi*sqrt(hbar^2/(2*m))/sqrt(E)
+        !              = pi/sqrt(E)
+        ! or, in this case,
+        !              = pi/sqrt(3)
+        !              ~ 1.813799
+        real(rp) :: rmax = 5.0 ! this is what Thijssen uses I think
+        type(Harmonic_Potential_t) :: pot
+        integer :: l = 0
+        real(rp) :: h ! integration step
+        real(rp) :: x = 3.0 ! energy
+        real(rp) :: r1, r2, ulr1, ulr2
+
+        ! integration step divides into rmax, so r1=rmax
+        h = 0.2
+        call numerov(pot, h, l, x, rmax, r1, r2, ulr1, ulr2)
+        @assertEqual(r1, rmax, tolerance=1.e-10, message='r1 should be rmax if rmax divisible by h')
+
+        @assertEqual(r2, 7.0_rp)
+        @assertEqual(ulr1, harmonic_sol(r1,h))
+        @assertEqual(ulr2, harmonic_sol(r2,h))
+    end subroutine test_numerov_harmonic
+
+    pure real(rp) function harmonic_sol(r,h) result(retval)
+    real(rp), intent(in) :: r,h
+    retval = r * exp(-r*r/2) * exp(h*h/2)
+    end function harmonic_sol
+
+ end module test_integrate
