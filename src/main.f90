@@ -17,7 +17,7 @@ program loss_rate
     ! todo read input parameters from json file
     ! for now, defaulting to some values inside Potential_t
     ! pot = Potential_t()
-    print*, pot%potential(5.)
+    print*, pot%potential(5._rp)
 
     contains
 
