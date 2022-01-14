@@ -26,11 +26,14 @@ module potential_type
 
     ! real(rp) :: some_val
     real(rp), allocatable :: data(:,:)
+    real(rp) :: alpha=1 ! 2m/hbar^2, called alpha in Thijssen
+    logical :: hasSingularityAtR0 = .false.
 
     contains
 
         !! TODO not really sure what the point of the interface is??
         procedure(pot_int), pass(this), deferred :: potential
+        ! procedure, pass(this) :: getAlpha
         ! procedure(sol_int), pass(this), deferred :: solve
         ! procedure(delta_int), pass(this), deferred :: calc_delta
         procedure, pass(this) :: init_potential ! helper for extended constructors
@@ -86,6 +89,12 @@ module potential_type
     !     module procedure :: lennardjones_construct
     ! end interface LennardJones_t
 contains
+
+! pure real(rp) function getAlpha(this) result(alpha)
+!     !! returns 2m/hbar^2, called alpha in Thijssen
+!     class(Potential_t), intent(in) :: this
+!     alpha = 1
+! end function getAlpha
 
 pure subroutine init_potential(this, maxE, minE, numE, lmax, start_r, end_r, rstep)
     !! generic constructor used inside extended constructors
