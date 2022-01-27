@@ -19,7 +19,19 @@ contains
         delta = -1._rp ! TODO stub
     end function
 
-    pure subroutine numerov(pot, step, l, E, rmax, r1, r2, ulr1, ulr2, rsep_)
+    pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_)
+        implicit none
+        class(Potential_t), intent(in) :: pot
+        real(rp), intent(in) :: startPoint, startVal, nextPoint, nextVal, energy
+        integer, intent(in) :: l_ang, steps_tot
+        real(rp), intent(in), optional :: rsep_
+        real(rp) :: rsep
+
+        rsep = pi/sqrt(energy)/pot%alpha
+        if (present(rsep_)) rsep = rsep_        
+    end subroutine numerov
+
+    pure subroutine numerov_old(pot, step, l, E, rmax, r1, r2, ulr1, ulr2, rsep_)
         ! use a debugger instead of print statements when debugging :)
         ! you can do this by running gdb on the executable pFUnit produces
         ! TODO below is notes on Thijssen's implementation
@@ -127,7 +139,7 @@ contains
 
     INTEGER I, StartI, EndI, MaxSol, IStep
 
-    DOUBLE PRECISION Phi, PhiStart, PhiNext, W, WNext, WPrev, &
+    real(rp) Phi, PhiStart, PhiNext, W, WNext, WPrev, &
   &        Delta, Fac, FArr(MaxSol), DeltaSq, Solution(MaxSol)
 
     LOGICAL Sing

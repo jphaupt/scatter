@@ -1,6 +1,6 @@
 module test_integrate
     use potential_type, only: Potential_t, Harmonic_Potential_t
-    use integrate, only: numerov_thijssen
+    use integrate, only: numerov_thijssen, numerov
     use precision, only: rp
     use constants, only: pi
     use funit
@@ -49,60 +49,62 @@ module test_integrate
        @assertFalse(1 == 2)
     end subroutine test_assert_true_and_false
 
-    ! ! @test ! TODO
+    ! @test
     ! TODO this doesn't compile with REAL=64 for some reason...
-    ! subroutine test_numerov_harmonic()
-    !     ! TODO check tolerances (don't remember how)
-    !     !! check 1 of page 20 in Thijssen
-    !     !! for V(r)=r^2, l=0, E=3 should (apparently) give
-    !     !! r * exp(-r^2/2) * exp(h^2/2)
-    !     ! wavelength = 2*pi*hbar/sqrt(2*m*E)
-    !     ! want r1 and r2 to differ by ~wavelength/2
-    !     ! r1 to be the first integration point past rmax
-    !     ! hbar^2/2m=1 -> hbar*w=2
-    !     ! w = 2*pi/wavelength
-    !     ! wavelength/2 = pi*hbar/sqrt(2*m*E)
-    !     !              = pi*sqrt(hbar^2/(2*m))/sqrt(E)
-    !     !              = pi/sqrt(E)
-    !     ! or, in this case,
-    !     !              = pi/sqrt(3)
-    !     !              ~ 1.813799
-    !     real(rp) :: rmax = 5.0_rp ! this is what Thijssen uses I think
-    !     type(Harmonic_Potential_t) :: pot
-    !     integer :: l = 0
-    !     real(rp) :: h ! integration step
-    !     real(rp) :: x = 3._rp ! energy
-    !     real(rp) :: r1, r2, ulr1, ulr2, tmp
+    subroutine test_numerov_harmonic()
+        ! TODO check tolerances (don't remember how)
+        !! check 1 of page 20 in Thijssen
+        !! for V(r)=r^2, l=0, E=3 should (apparently) give
+        !! r * exp(-r^2/2) * exp(h^2/2)
+        ! wavelength = 2*pi*hbar/sqrt(2*m*E)
+        ! want r1 and r2 to differ by ~wavelength/2
+        ! r1 to be the first integration point past rmax
+        ! hbar^2/2m=1 -> hbar*w=2
+        ! w = 2*pi/wavelength
+        ! wavelength/2 = pi*hbar/sqrt(2*m*E)
+        !              = pi*sqrt(hbar^2/(2*m))/sqrt(E)
+        !              = pi/sqrt(E)
+        ! or, in this case,
+        !              = pi/sqrt(3)
+        !              ~ 1.813799
+        real(rp) :: rmax = 5.0_rp ! this is what Thijssen uses I think
+        type(Harmonic_Potential_t) :: pot
+        integer :: l = 0
+        real(rp) :: h ! integration step
+        real(rp) :: x = 3._rp ! energy
+        real(rp) :: r1, r2, ulr1, ulr2, tmp, A
 
-    !     ! integration step divides into rmax, so r1=rmax
-    !     h = 0.01_rp
-    !     call numerov(pot, h, l, x, rmax, r1, r2, ulr1, ulr2)
-    !     @assertEqual(r1, rmax, tolerance=1.e-10_rp, message='r1 should be rmax if rmax divisible by h')
+        ! integration step divides into rmax, so r1=rmax
+        h = 0.01_rp
+        ! call numerov(pot, h, l, x, rmax, r1, r2, ulr1, ulr2)
+        @assertEqual(r1, rmax, tolerance=1.e-10_rp, message='r1 should be rmax if rmax divisible by h')
 
-    !     ! @assertEqual(r2, 6.0_rp, tolerance=1.e-10_rp)
-    !     print*, ulr1, ulr2 ! , harmonic_sol(r1,h)
-    !     ! tmp = harmonic_sol(r1,h)
-    !     ! tmp =  r1 * exp(-r1*r1/2) * exp(h*h/2)
-    !     tmp =  r1 * exp((h*h-r1*r1)/2._rp) ! * exp(h*h/2)
-    !     print*, tmp
-    !     print*, exp(-r1*r1/2)
-    !     print*, exp(h*h/2)
-    !     ! tmp = ulr1 ! TODO problem is definitely in tmp
-    !     ! ulr1=tmp ! actually maybe a type mismatch??
-    !     print*, ulr1-tmp
-    !     ! TODO looks like pFUnit just gives up and crahes when there is too
-    !     ! great a magnitude difference for some reason -_-
-    !     ! unless the tolerance is huge
-    !     ! ulr1=-2.88930874013103365092862443614908972_rp
-    !     ! tmp=1.90096827998481017860294953523121622*1.e-5
-        
-    !     @assertEqual(ulr1, tmp, tolerance=1.e-5_rp)
-    !     ! @assertEqual(ulr2, harmonic_sol(r2,h), tolerance=1.e-10)
-    ! end subroutine test_numerov_harmonic
+        ! @assertEqual(r2, 6.0_rp, tolerance=1.e-10_rp)
+        print*, ulr1, ulr2 ! , harmonic_sol(r1,h)
+        ! tmp = harmonic_sol(r1,h)
+        ! tmp =  r1 * exp(-r1*r1/2) * exp(h*h/2)
+        ! tmp =  r1 * exp((h*h-r1*r1)/2._rp) ! * exp(h*h/2)
+        A = sqrt(2._rp)/pi**(1/4._rp)
+        tmp =A * exp((-rmax*rmax)/2._rp) * rmax
+        print*, tmp
+        print*, exp(-r1*r1/2)
+        print*, exp(h*h/2)
+        ! tmp = ulr1 ! TODO problem is definitely in tmp
+        ! ulr1=tmp ! actually maybe a type mismatch??
+        print*, ulr1-tmp
+        ! TODO looks like pFUnit just gives up and crahes when there is too
+        ! great a magnitude difference for some reason -_-
+        ! unless the tolerance is huge
+        ! ulr1=-2.88930874013103365092862443614908972_rp
+        ! tmp=1.90096827998481017860294953523121622*1.e-5
 
-    @test
+        @assertEqual(ulr1, tmp, tolerance=1.e-5_rp)
+        ! @assertEqual(ulr2, harmonic_sol(r2,h), tolerance=1.e-10)
+    end subroutine test_numerov_harmonic
+
+    ! @test
     subroutine test_numerov_thijssen()
-        real(rp) :: hstep = 0.02, energy=1.5, maxDist=5.0
+        real(rp) :: hstep = 0.02, energy=1.5, maxDist=4.0
         integer :: secMaxI, maxI
         integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
         real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
@@ -126,17 +128,24 @@ module test_integrate
         ! print*, FArr(1:secMaxI)
         phi1 = 0 ! how could this possibly be the value at r=0?? n=1 I guess
         phi2 = hstep
+        ! according to wolfram, should get:
+        ! phi(5.0) = 0.0000186370 which is about the expected one I found
+        ! phi(4.0) = 0.00134212 which is basically what I get for both
+        ! (0.02 ParabolicCylinderD[1, Sqrt[2] 4])/ParabolicCylinderD[1, Sqrt[2] 0.02]
+        ! TODO the problem is likely numerical, and then another one coming from
+        ! the assumption I make u(h)=h (I think this is fine though)
+        ! TODO use a log derivative or another method for the initial augmentation
         call numerov_thijssen(hstep, 1, secMaxI+1, maxSol, FArr, .false., phi1, phi2, solution)
         phiend1 = solution(maxI+1)
         print*, 'rmax?', r(maxI+1)
         print*, 'phiend1', phiend1
-        rcurr = r(maxI+1)
+        rcurr = r(maxI+2)
         phiend2 = solution(secMaxI+1)
-        A = 1._rp/sqrt(2._rp)/pi**(1/4._rp)
-        tmp =A * exp((-rcurr*rcurr)/2._rp)
+        A = sqrt(2._rp)/pi**(1/4._rp)
+        tmp =A * exp((-rcurr*rcurr)/2._rp) * rcurr
         ! why does the exact solution depend on the integration step?! Typo?
         ! @assertEqual(phiend1,rcurr * exp((hstep*hstep-rcurr*rcurr)/2._rp), tolerance=1.e-5_rp)
-        @assertEqual(phiend1, tmp, tolerance=1.e-5_rp)
+        @assertEqual(phiend1, tmp, tolerance=1.e-10_rp)
     end subroutine test_numerov_thijssen
 
     ! pure real(rp) function harmonic_sol(r,h) result(retval)
