@@ -29,8 +29,8 @@ if(REAL)
 #       CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION} -DSKIP_DOC_GEN=FALSE -DJSON_REAL_KIND=REAL${REAL}
 #   )
 else()
-  message(STATUS "Configuring build for 32-bit reals")
-  add_definitions(-DREAL32)
+  message(STATUS "Configuring build for 64-bit reals")
+  add_definitions(-DREAL64)
 #   ExternalProject_Add(jsonfortran
 #   GIT_REPOSITORY https://github.com/jphaupt/json-fortran
 #   CMAKE_ARGS -DCMAKE_INSTALL_PREFIX=${EXTERNAL_INSTALL_LOCATION} -DSKIP_DOC_GEN=FALSE -DJSON_REAL_KIND=REAL32
