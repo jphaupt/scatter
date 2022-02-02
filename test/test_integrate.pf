@@ -84,11 +84,15 @@ module test_integrate
         r1_thij = r(maxI+1)
         r2_thij = r(secMaxI+1)
         call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, quartWave, sols)
-        print*, "r1", r1_thij, startPt
-        print*, "sol_thij", solution(1:maxI+1)
-        print*, "sol_mine", sols
+        ! print*, "r1", r1_thij, startPt
+        ! print*, "sol_thij", solution(1:maxI+1)
+        ! print*, "sol_mine", sols
         @assertEqual(r1_thij, startPt, tolerance=1.e-10_rp)
         @assertEqual(phiend1, startVal, tolerance=1.e-5_rp)
+        ! TODO !! must still check the other two
+        print*, maxDist + quartWave
+        @assertEqual(r2_thij, nextPt, tolerance=1.e-10_rp, message='very last point')
+        @assertEqual(phiend2, nextVal, tolerance=1.e-5_rp)
     end subroutine
 
     ! TODO this doesn't compile with REAL=64 or 128 for some reason...?

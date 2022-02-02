@@ -19,8 +19,7 @@ contains
       delta = -1._rp ! TODO stub
    end function
 
-    ! pure 
-    subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_, sols)
+    pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_, sols)
       implicit none
       class(Potential_t), intent(in) :: pot
       real(rp), intent(inout) :: startPoint, startVal, nextPoint, nextVal
@@ -41,6 +40,8 @@ contains
       integer :: i
 
       if (present(sols)) allocate(sols(steps_tot+1)) 
+      rsep = pi/sqrt(energy)/pot%alpha
+      if (present(rsep_)) rsep = rsep_
       
 
       hstep = nextPoint - startPoint
@@ -74,54 +75,28 @@ contains
       startVal = ucurr
       startPoint = position
 
-      ! TODO the other two...
+      steps_tot = int(rsep/hstep)
+      do i=1, steps_tot
+        ! fval = radialRHS(pot, position, l_ang, energy)
+        wnext = wcurr*2._rp - wprev + hstep_sq*ucurr*fval
+        wprev = wcurr
+        wcurr = wnext
+        position = position + hstep
+        ! print*, position
+        fval = radialRHS(pot, position, l_ang, energy)
+        ucurr = getU(wcurr, fval, hstep_sq)
+        ! TODO sols
+        ! if (allocated(sols)) sols(i+1) = ucurr
+      enddo
+      nextPoint = position
+      nextVal = ucurr
 
-      ! previous....
-    !   ! renaming variables...
-    !   wprev = startVal
-    !   wcurr = nextVal
-    !   position = nextPoint
-
-    !   rsep = pi/sqrt(energy)/pot%alpha
-    !   if (present(rsep_)) rsep = rsep_
-
-    !   hstep = nextPoint - startPoint
-    !   hstep2 = hstep * hstep
-
-    !   !!!! TODO this gives NaN because of division by zero!! r=0 
-    !   ! should I start at a different r? Maybe at h
-    !   ! see top of page 20
-    !   fval = radialRHS(pot, startPoint, l_ang, energy)
-    !   wcurr = getW(nextVal, fval, hstep2)
-
-    !   do i=1, steps_tot-1
-    !     wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
-    !     position = position + hstep
-    !     wprev = wcurr
-    !     wcurr = wnext
-    !     fval = radialRHS(pot, position, l_ang, energy)
-    !     ucurr = getU(wcurr, fval, hstep2)
-    !   enddo
-    !   startPoint = position
-    !   startVal = ucurr
-
-    !   steps_tot = int(rsep/hstep)
-
-    !   do i=1, steps_tot-1
-    !     wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
-    !     position = position + hstep
-    !     wprev = wcurr
-    !     wcurr = wnext
-    !     fval = radialRHS(pot, position, l_ang, energy)
-    !     ucurr = getU(wcurr, fval, hstep2)
-    !   enddo
-    !   nextPoint = position
-    !   nextVal = ucurr
     end subroutine numerov
 
    subroutine numerov_thijssen(Delta, StartI, EndI, MaxSol, FArr, &
    &                     Sing, PhiStart, PhiNext, Solution)
-      ! copying thijssen's numerov subroutine because mine doesn't seem to work...
+      ! used just for testing
+      ! written by Jos Thijssen (author of _Computational Physics_), not my work
       IMPLICIT NONE
 
       INTEGER I, StartI, EndI, MaxSol, IStep
