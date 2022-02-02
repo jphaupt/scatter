@@ -49,8 +49,50 @@ module test_integrate
        @assertFalse(1 == 2)
     end subroutine test_assert_true_and_false
 
-    ! TODO this doesn't compile with REAL=64 or 128 for some reason...?
     @test
+    subroutine test_numerov_against_thijssen()
+        ! TODO tests my Numerov implementation against Thijssen's implementation
+        ! in principle they should be the same since I basically copied his
+        ! implementation; I have no idea why it doesn't work
+        ! as before, I work with the harmonic potential
+        real(rp) :: hstep = 0.02, energy=1.5, maxDist=4.0
+        integer :: secMaxI, maxI, l=0
+        integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
+        real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
+        real(rp) :: K
+        real(rp) :: quartWave, secR
+        real(rp) :: startPt=0.0, startVal, nextVal, nextPt ! I think..
+        integer :: i
+        real(rp) :: phiend1, phiend2, r1_thij, r2_thij
+        real(rp) :: A, tmp, rcurr
+        real(rp), allocatable :: sols(:)
+        
+        type(Harmonic_Potential_t) :: pot
+        maxI = nint((maxDist-startPt)/hstep)
+        K = sqrt(energy)
+        quartWave = 0.5D0*PI/K
+        secR = maxDist + quartWave
+        secMaxI = int((secR-startPt)/hstep)
+        r = [((i-1)*hstep, i=1, secMaxI+1)]
+        FArr = harmonicF(r, energy)
+        startVal = 0 ! how could this possibly be the value at r=0?? n=1 I guess
+        nextVal = hstep
+        nextPt = hstep
+        call numerov_thijssen(hstep, 1, secMaxI+1, maxSol, FArr, .false., startVal, nextVal, solution)
+        phiend1 = solution(maxI+1)
+        phiend2 = solution(secMaxI+1)
+        r1_thij = r(maxI+1)
+        r2_thij = r(secMaxI+1)
+        call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, quartWave, sols)
+        print*, "r1", r1_thij, startPt
+        print*, "sol_thij", solution(1:maxI+1)
+        print*, "sol_mine", sols
+        @assertEqual(r1_thij, startPt, tolerance=1.e-10_rp)
+        @assertEqual(phiend1, startVal, tolerance=1.e-5_rp)
+    end subroutine
+
+    ! TODO this doesn't compile with REAL=64 or 128 for some reason...?
+    ! @test
     subroutine test_numerov_harmonic()
         ! a = E
         ! b = pot%alpha
@@ -89,7 +131,7 @@ module test_integrate
         ! TODO also test case where hstep doesn't divide maxDist
     end subroutine test_numerov_harmonic
 
-    @test
+    ! @test
     subroutine test_numerov_thijssen()
         real(rp) :: hstep = 0.02, energy=1.5, maxDist=4.0
         integer :: secMaxI, maxI

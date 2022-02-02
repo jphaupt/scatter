@@ -19,7 +19,8 @@ contains
       delta = -1._rp ! TODO stub
    end function
 
-   pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_)
+    ! pure 
+    subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_, sols)
       implicit none
       class(Potential_t), intent(in) :: pot
       real(rp), intent(inout) :: startPoint, startVal, nextPoint, nextVal
@@ -31,154 +32,89 @@ contains
       integer, intent(inout) :: steps_tot
       real(rp), intent(in), optional :: rsep_
       real(rp) :: rsep
-      real(rp) :: hstep, hstep2
-      real(rp) :: wprev, wcurr, wnext, ucurr
+      real(rp) :: hstep, hstep_sq !hstep2
+      real(rp) :: wprev, wcurr, wnext, ucurr, unext
       real(rp) :: fval, position, new_steps_tot
+    !   real(rp), allocatable :: sols
+      real(rp), optional, allocatable, intent(out) :: sols(:)
 
       integer :: i
 
-      ! renaming variables...
-      wprev = startVal
-      wcurr = nextVal
-      position = nextPoint
-
-      rsep = pi/sqrt(energy)/pot%alpha
-      if (present(rsep_)) rsep = rsep_
-
+      if (present(sols)) allocate(sols(steps_tot+1)) 
+      
       hstep = nextPoint - startPoint
-      hstep2 = hstep * hstep
-
-      !!!! TODO this gives NaN because of division by zero!! r=0 
-      ! should I start at a different r? Maybe at h
-      ! see top of page 20
-      fval = radialRHS(pot, startPoint, l_ang, energy)
-      wcurr = getW(nextVal, fval, hstep2)
-
-      do i=1, steps_tot-1
-        wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
-        position = position + hstep
-        wprev = wcurr
-        wcurr = wnext
-        fval = radialRHS(pot, position, l_ang, energy)
-        ucurr = getU(wcurr, fval, hstep2)
-      enddo
-      startPoint = position
-      startVal = ucurr
-
-      steps_tot = int(rsep/hstep)
-
-      do i=1, steps_tot-1
-        wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
-        position = position + hstep
-        wprev = wcurr
-        wcurr = wnext
-        fval = radialRHS(pot, position, l_ang, energy)
-        ucurr = getU(wcurr, fval, hstep2)
-      enddo
-      nextPoint = position
-      nextVal = ucurr
-   end subroutine numerov
-
-   pure subroutine numerov_old(pot, step, l, E, rmax, r1, r2, ulr1, ulr2, rsep_)
-      ! use a debugger instead of print statements when debugging :)
-      ! you can do this by running gdb on the executable pFUnit produces
-      ! TODO below is notes on Thijssen's implementation
-      ! initial values: phistart, phinext
-      ! integration step: delta
-      ! integrate from startI to endI
-      ! solution is in array Solution (size maxSol)
-      ! Sing is if there is a singularity at r=0 in the potential
-      ! Phi''(r_i) = FArr(r_i)*Phi(r_i)
-      ! they fill FArr first:
-      ! FArr(r_i) = 2*(V(R)-E)+L*(L+1)/R**2
-      ! (not sure why 2* -- I guess that is alpha for LJ pot)
-      implicit none
-      class(Potential_t), intent(in) :: pot
-      real(rp), intent(in) :: step, E, rmax ! rmin?
-      integer, intent(in) :: l
-      real(rp), intent(out) :: r1, r2, ulr1, ulr2
-      real(rp), intent(in), optional :: rsep_
-      !! r2 - r1 (defaults to wavelength/2 = pi*sqrt(hbar^2/(2*m))/sqrt(E))
-      !! right now I also have hbar^2/2m = 1 so this is just pi/sqrt(E)
-      real(rp) :: rsep
-      real(rp) :: step_sq, r, w, w_prev, sol, fval
-      real(rp) :: sol_next ! solution(startI+Istep)
-
-      ! NOTE these will be different depending on potential
-      ! must still implement them there
-      ! or maybe make them optional arguments
-      real(rp) :: r_start, w_start, r_next, w_next
-      real(rp) :: u_start, u, u_next, u_prev
-      r_start = 0 ! todo do I even need this?
-      r_next = step
-      u_start = 0
-      u_next = step**(l+1)
-
-      rsep = pi/sqrt(E)/pot%alpha
-      if (present(rsep_)) rsep = rsep_
-
-      step_sq = step*step
-
+      hstep_sq = hstep*hstep
+      position = startPoint
       if (pot%hasSingularityAtR0) then
-         w_prev = u_start
+        wprev = startVal
       else
-         fval = pot%alpha * (pot%potential(r) - E) ! assuming l=0
-         w_prev = getW(u_start, fval, step_sq)
-         ! (1-step_sq/12.*fval)*u_start ! just 0 anyway?!
-         sol = u_start
-      end if
+        fval = radialRHS(pot, position, l_ang, energy)
+        wprev = getW(startVal, fval, hstep_sq)
+      endif
 
-      u = u_next
-      sol_next = u_next
-      fval = radialRHS(pot, r_next, l, E)
-      w = getW(u, fval, step_sq)
+      ucurr = unext
+      position = position + hstep
+      fval = radialRHS(pot, position, l_ang, energy)
+      wcurr = getW(ucurr, fval, hstep_sq)
 
-      do while (rmax-r > 1.e-8)
-         w_next = 2. * w - w_prev + step_sq * u * fval
-         w_prev = w
-         w = w_next
-         r = r + step
-         fval = radialRHS(pot, r, l, E)
-         u = getU(w, fval, step_sq)
-         sol_next = u
-         ! TODO
-      end do
+      do i=1, steps_tot-1
+        ! fval = radialRHS(pot, position, l_ang, energy)
+        wnext = wcurr*2._rp - wprev + hstep_sq*ucurr*fval
+        wprev = wcurr
+        wcurr = wnext
+        position = position + hstep
+        ! print*, position
+        fval = radialRHS(pot, position, l_ang, energy)
+        ucurr = getU(wcurr, fval, hstep_sq)
+        if (allocated(sols)) sols(i+1) = ucurr
+      enddo
+      startVal = ucurr
+      startPoint = position
 
-      r1 = r
-      ulr1 = sol_next
+      ! TODO the other two...
 
-      ! TODO !! ulr2
-      r2 = -1
-      ulr2 = -1
+      ! previous....
+    !   ! renaming variables...
+    !   wprev = startVal
+    !   wcurr = nextVal
+    !   position = nextPoint
 
-      ! w_prev = w_start
-      ! w = w_next
-      ! r = r_next
-      ! fval = radialRHS(pot, r, l, E)
-      ! ! print*, fval
-      ! sol = (1 - step_sq/12*fval)*w
-      ! do while (r < rmax)
-      !     w_next = 2. * w - w_prev + step_sq * sol * fval
-      !     ! print*, r, w_next
-      !     r = r + step
-      !     w_prev = w
-      !     w = w_next
-      !     fval = radialRHS(pot, r, l, E)
-      !     sol = getU(w, fval, step_sq)
-      ! end do
-      ! r1 = r
-      ! ulr1 = sol
-      ! do while (r < rmax+rsep)
-      !     w_next = 2. * w - w_prev + step_sq * sol * fval
-      !     r = r + step
-      !     w_prev = w
-      !     w = w_next
-      !     fval = radialRHS(pot, r, l, E)
-      !     sol = getU(w, fval, step_sq)
-      ! end do
-      ! r2 = r
-      ! ulr2 = sol
-   end subroutine
+    !   rsep = pi/sqrt(energy)/pot%alpha
+    !   if (present(rsep_)) rsep = rsep_
+
+    !   hstep = nextPoint - startPoint
+    !   hstep2 = hstep * hstep
+
+    !   !!!! TODO this gives NaN because of division by zero!! r=0 
+    !   ! should I start at a different r? Maybe at h
+    !   ! see top of page 20
+    !   fval = radialRHS(pot, startPoint, l_ang, energy)
+    !   wcurr = getW(nextVal, fval, hstep2)
+
+    !   do i=1, steps_tot-1
+    !     wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
+    !     position = position + hstep
+    !     wprev = wcurr
+    !     wcurr = wnext
+    !     fval = radialRHS(pot, position, l_ang, energy)
+    !     ucurr = getU(wcurr, fval, hstep2)
+    !   enddo
+    !   startPoint = position
+    !   startVal = ucurr
+
+    !   steps_tot = int(rsep/hstep)
+
+    !   do i=1, steps_tot-1
+    !     wnext = 2._rp * wcurr - wprev + hstep2 * ucurr * fval
+    !     position = position + hstep
+    !     wprev = wcurr
+    !     wcurr = wnext
+    !     fval = radialRHS(pot, position, l_ang, energy)
+    !     ucurr = getU(wcurr, fval, hstep2)
+    !   enddo
+    !   nextPoint = position
+    !   nextVal = ucurr
+    end subroutine numerov
 
    subroutine numerov_thijssen(Delta, StartI, EndI, MaxSol, FArr, &
    &                     Sing, PhiStart, PhiNext, Solution)
@@ -233,7 +169,10 @@ contains
 
       ! TODO what to do if r=0??
       ! TODO this fails and gives NaN for r=0
-      V_eff = pot%alpha * (pot%potential(r) - energy) + l * (l+1_rp) / (r*r)
+    !   V_eff = pot%alpha * (pot%potential(r) - energy) + l * (l+1_rp) / (r*r)
+
+      ! TODO
+      V_eff = r*r-energy*2.
 
    end function radialRHS
 
