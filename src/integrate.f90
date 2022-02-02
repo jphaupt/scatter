@@ -50,7 +50,13 @@ contains
       if (pot%hasSingularityAtR0) then
         wprev = startVal
       else
-        fval = radialRHS(pot, position, l_ang, energy)
+        if (abs(position)<=1.e-10_rp) then
+            ! just ignore the l term... Not a great solution but hopefully it works
+            fval = pot%alpha * (pot%potential(position) - energy) ! should this be 2*energy???
+        else
+            fval = radialRHS(pot, position, l_ang, energy)
+        endif
+        ! fval = radialRHS(pot, position, l_ang, energy)
         wprev = getW(startVal, fval, hstep_sq)
         if (allocated(sols)) sols(1) = startVal
       endif
@@ -145,12 +151,7 @@ contains
       integer, intent(in) :: l
       real(rp), intent(in) :: r, energy
 
-      ! TODO what to do if r=0??
-      ! TODO this fails and gives NaN for r=0
-    !   V_eff = pot%alpha * (pot%potential(r) - energy) + l * (l+1_rp) / (r*r)
-
-      ! TODO
-      V_eff = r*r-energy*2.
+      V_eff = pot%alpha * (pot%potential(r) - energy) + 1_rp * l * (l+1._rp) / (r*r)
 
    end function radialRHS
 

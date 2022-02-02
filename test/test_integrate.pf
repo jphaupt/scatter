@@ -5,6 +5,7 @@ module test_integrate
     use constants, only: pi
     use funit
     implicit none
+    ! TODO have tolerances depend on the precision (right now fails only for real32)
 
     ! note: you must go to Testing/Temporary/LastTest.log to get useful output
     ! or do ctest --output-on-failure
@@ -55,7 +56,8 @@ module test_integrate
         ! in principle they should be the same since I basically copied his
         ! implementation; I have no idea why it doesn't work
         ! as before, I work with the harmonic potential
-        real(rp) :: hstep = 0.02, energy=1.5, maxDist=4.0
+        real(rp) :: energy=3.0
+        real(rp) :: hstep = 0.02, maxDist=4.0
         integer :: secMaxI, maxI, l=0
         integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
         real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
@@ -85,14 +87,13 @@ module test_integrate
         r2_thij = r(secMaxI+1)
         call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, quartWave, sols)
         ! print*, "r1", r1_thij, startPt
+        ! print*, "phiend1", phiend1, startVal
         ! print*, "sol_thij", solution(1:maxI+1)
         ! print*, "sol_mine", sols
-        @assertEqual(r1_thij, startPt, tolerance=1.e-10_rp)
-        @assertEqual(phiend1, startVal, tolerance=1.e-5_rp)
-        ! TODO !! must still check the other two
-        print*, maxDist + quartWave
-        @assertEqual(r2_thij, nextPt, tolerance=1.e-10_rp, message='very last point')
-        @assertEqual(phiend2, nextVal, tolerance=1.e-5_rp)
+        @assertEqual(r1_thij, startPt, tolerance=1.e-8_rp)
+        @assertEqual(phiend1, startVal, tolerance=1.e-8_rp)
+        @assertEqual(r2_thij, nextPt, tolerance=1.e-8_rp, message='very last point')
+        @assertEqual(phiend2, nextVal, tolerance=1.e-8_rp)
     end subroutine
 
     ! TODO this doesn't compile with REAL=64 or 128 for some reason...?
@@ -198,7 +199,7 @@ module test_integrate
         real(rp), intent(in) :: r, energy
 
         ! V_eff = 2*r*r - energy
-        V_eff = r*r-energy*2.
+        V_eff = r*r-energy !*2.
 
     end function harmonicF
  end module test_integrate
