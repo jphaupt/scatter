@@ -10,7 +10,6 @@ contains
     elemental recursive real(rp) function sphericalJ(l, x) result(out)
         !! spherical Bessel function j_l(x)
         !! @todo surely there is a better way to do this? Some stdlib?
-        ! TODO test this function?
         implicit none
         integer, intent(in) :: l
         real(rp), intent(in) :: x
@@ -27,7 +26,6 @@ contains
 
     pure real(rp) function j0(x)
         ! spherical Bessel with l=0
-        ! TODO ? put in "contains" keyword inside sphericalJ?
         implicit none
         real(rp), intent(in) :: x
         j0 = sin(x)/x

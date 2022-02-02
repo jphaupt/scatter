@@ -52,10 +52,7 @@ module test_integrate
 
     @test
     subroutine test_numerov_against_thijssen()
-        ! TODO tests my Numerov implementation against Thijssen's implementation
-        ! in principle they should be the same since I basically copied his
-        ! implementation; I have no idea why it doesn't work
-        ! as before, I work with the harmonic potential
+        ! tests my Numerov implementation against Thijssen's implementation
         real(rp) :: energy=3.0
         real(rp) :: hstep = 0.02, maxDist=4.0
         integer :: secMaxI, maxI, l=0
@@ -68,7 +65,7 @@ module test_integrate
         real(rp) :: phiend1, phiend2, r1_thij, r2_thij
         real(rp) :: A, tmp, rcurr
         real(rp), allocatable :: sols(:)
-        
+
         type(Harmonic_Potential_t) :: pot
         maxI = nint((maxDist-startPt)/hstep)
         K = sqrt(energy)
@@ -96,99 +93,13 @@ module test_integrate
         @assertEqual(phiend2, nextVal, tolerance=1.e-8_rp)
     end subroutine
 
-    ! TODO this doesn't compile with REAL=64 or 128 for some reason...?
-    ! @test
-    subroutine test_numerov_harmonic()
-        ! a = E
-        ! b = pot%alpha
-        ! c = h
-        ! https://www.wolframalpha.com/input/?i=y%27%27%28x%29+%3D+b*%28x%5E2-a%29*y%3B+y%28c%29%3Dc%2C+y%280%29%3D0
-        ! Wolfram solution:
-        ! where is E in this solution??
-        ! (hstep ParabolicCylinderD[1, Sqrt[2] maxDist])/ParabolicCylinderD[1, Sqrt[2] hstep]
-        ! (the solution depends on the time step because of the initial conditions)
-        ! (u(0)=0, u(h)=h)
-        ! TODO is the energy incorrect or something!? It comes out much more reasonable
-        !       when E=3.0 than E=1.5 (I think values blow up if not stationary state)
-        real(rp) :: hstep = 0.01, E=3.0, maxDist=5.00 ! 5.01
-        integer :: secMaxI, maxI, l=0
-        real(rp) :: quartWave
-        type(Harmonic_Potential_t) :: pot
-        integer :: i
-        real(rp) :: startPt=0.01, startVal=0.01, nextVal=0.02, nextPt=0.02 ! I think..
-        maxI = int((maxDist-startpt)/hstep)
-        print*, "maxI", maxI
-        ! @assertEqual(maxI, 500)
-        quartWave = 0.5 * pi/sqrt(E)
-
-        call numerov(pot, startPt, startVal, nextPt, nextVal, l, E, maxI, quartWave)
-        print*, startVal
-        print*, 6.29_rp
-        print*, nextPt
-        @assertEqual(startPt, maxDist, tolerance=1.e-5_rp)
-        ! this value also ends up NaN so not sure why other one doesn't compile
-        ! 0.000016927516475
-        ! @assertEqual(startVal, 0.0000186342_rp, tolerance=1.e-5_rp)
-        @assertEqual(startVal, 0.000016927516475_rp, tolerance=1.e-5_rp)
-        ! TODO submit report that pFUnit compiles but fails at run time for NaN
-        ! @assertEqual(nextPt, 6.29_rp, tolerance=1.e-8_rp) ! this one fails to build!!!
-        ! @assertEqual(nextVal, 1.68757144678655e-8_rp, tolerance=1.e-8_rp)
-        ! TODO also test case where hstep doesn't divide maxDist
-    end subroutine test_numerov_harmonic
-
-    ! @test
-    subroutine test_numerov_thijssen()
-        real(rp) :: hstep = 0.02, energy=1.5, maxDist=4.0
-        integer :: secMaxI, maxI
-        integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
-        real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
-        real(rp) :: K
-        real(rp) :: quartWave, secR
-        real(rp) :: start = 0
-        integer :: i
-        real(rp) :: phiend1, phiend2, rcurr
-        real(rp) :: A, tmp
-        maxI = nint((maxDist-start)/hstep)
-        K = sqrt(energy)
-        quartWave = 0.5D0*PI/K
-        secR = maxDist + quartWave
-        secMaxI = int((secR-start)/hstep)
-        ! implied loop
-        ! r(1) = 0
-        r = [((i-1)*hstep, i=1, secMaxI+1)]
-        ! FArr = [(harmonicF(start+(i-1)*hstep, energy), i=1, secMaxI)]
-        FArr = harmonicF(r, energy)
-        ! print*, r(1:secMaxI)
-        ! print*, FArr(1:secMaxI)
-        phi1 = 0 ! how could this possibly be the value at r=0?? n=1 I guess
-        phi2 = hstep
-        ! according to wolfram, should get:
-        ! phi(5.0) = 0.0000186370 which is about the expected one I found
-        ! phi(4.0) = 0.00134212 which is basically what I get for both
-        ! (0.02 ParabolicCylinderD[1, Sqrt[2] 4])/ParabolicCylinderD[1, Sqrt[2] 0.02]
-        ! (hstep ParabolicCylinderD[1, Sqrt[2] maxDist])/ParabolicCylinderD[1, Sqrt[2] hstep]
-        ! TODO the problem is likely numerical, and then another one coming from
-        ! the assumption I make u(h)=h (I think this is fine though)
-        ! TODO use a log derivative or another method for the initial augmentation
-        call numerov_thijssen(hstep, 1, secMaxI+1, maxSol, FArr, .false., phi1, phi2, solution)
-        phiend1 = solution(maxI+1)
-        print*, 'rmax?', r(maxI+1)
-        print*, 'phiend1', phiend1
-        rcurr = r(maxI+2)
-        phiend2 = solution(secMaxI+1)
-        A = sqrt(2._rp)/pi**(1/4._rp)
-        tmp =A * exp((-rcurr*rcurr)/2._rp) * rcurr
-        ! why does the exact solution depend on the integration step?! Typo?
-        ! @assertEqual(phiend1,rcurr * exp((hstep*hstep-rcurr*rcurr)/2._rp), tolerance=1.e-5_rp)
-        @assertEqual(phiend1, tmp, tolerance=1.e-10_rp)
-    end subroutine test_numerov_thijssen
-
     ! pure real(rp) function harmonic_sol(r,h) result(retval)
     ! real(rp), intent(in) :: r,h
     ! retval = r * exp(-r*r/2) * exp(h*h/2)
     ! end function harmonic_sol
     pure elemental real(rp) function harmonicF(r, energy) result(V_eff)
         implicit none
+        !! helper function for numerov_thijssen
         !! returns the RHS of the radial Schroedinger equation, called F in
         !! equation 2.10 in Thijssen
         !! note this is actually 2*m/hbar^2 * F but at least for now the prefactor

@@ -1,0 +1,21 @@
+module test_special_functions
+    use precision, only: rp
+    use special_functions, only: sphericalJ, sphericalN
+    use funit
+    implicit none
+
+contains
+
+    @test
+    subroutine test_sphN
+        ! values from Thijssen (can get more examples from Wolfram, but I'm lazy)
+        @assertRelativelyEqual(-94.2361101_rp, sphericalN(5, 1.5_rp), tolerance=0.001)
+    end subroutine test_sphN
+
+    @test
+    subroutine test_sphJ
+        ! values from Thijssen (can get more examples from Wolfram, but I'm lazy)
+        @assertRelativelyEqual(6.69620596e-4_rp, sphericalJ(5, 1.5_rp), tolerance=0.001)
+    end subroutine test_sphJ
+
+end module test_special_functions
