@@ -42,6 +42,7 @@ contains
 
       if (present(sols)) allocate(sols(steps_tot+1)) 
       
+
       hstep = nextPoint - startPoint
       hstep_sq = hstep*hstep
       position = startPoint
@@ -50,9 +51,11 @@ contains
       else
         fval = radialRHS(pot, position, l_ang, energy)
         wprev = getW(startVal, fval, hstep_sq)
+        if (allocated(sols)) sols(1) = startVal
       endif
 
-      ucurr = unext
+      ucurr = nextVal
+      if (allocated(sols)) sols(2) = nextVal
       position = position + hstep
       fval = radialRHS(pot, position, l_ang, energy)
       wcurr = getW(ucurr, fval, hstep_sq)
