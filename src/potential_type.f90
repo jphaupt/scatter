@@ -2,6 +2,7 @@ module potential_type
     use precision, only: rp
     use constants, only: pi
     use iso_fortran_env, only: stdout => output_unit
+    use special_functions, only: sphJ => sphericalJ, sphN => sphericalN
     implicit none
 
     private
@@ -37,6 +38,8 @@ module potential_type
         ! procedure(sol_int), pass(this), deferred :: solve
         ! procedure(delta_int), pass(this), deferred :: calc_delta
         procedure, pass(this) :: init_potential ! helper for extended constructors
+        ! procedure(partial_cross_section_int), pass(this) :: partial_cross_section
+        procedure, pass(this) :: partial_cross_section
 
     end type Potential_t
 
@@ -47,7 +50,7 @@ module potential_type
     abstract interface
         ! ??? I guess there is no way to get an abstract constructor?
         ! module procedure :: potential_constructor
-        
+
         pure real(rp) elemental function pot_int(this, r) result(retval)
             import rp
             import Potential_t
@@ -63,13 +66,27 @@ module potential_type
         !     logical, intent(in), optional :: verbose_, tofile_, storeData_
         ! end subroutine sol_int
 
-        ! pure real(rp) function delta_int(this, l, energy, wavevec) result(delta)
+        pure real(rp) function delta_int(this, l, energy, r1, r2, u1, u2) result(delta)
+            import rp, Potential_t
+            class(Potential_t), intent(in) :: this
+            integer, intent(in) :: l
+            real(rp), intent(in) :: energy, r1, r2, u1, u2
+        end function delta_int
+
+        ! ! int for interface
+        ! though not sure if needed in this case?! review Curcic
+        ! I think only needed if it gets deferred, which it isn't here
+        ! pure real(rp) function partial_cross_section_int(this, l, energy, r1, r2, u1, u2) result(sigma_l)
+        !     !! @note this function may be deprecated once we do loss rates,
+        !     !! it assumes integration over the full domain, which is not true
+        !     !! for the application of interest
+        !     !! @endnote
+        !     !! however, if I do implement that this would be helpful for testing
         !     import rp, Potential_t
         !     class(Potential_t), intent(in) :: this
         !     integer, intent(in) :: l
-        !     real(rp), intent(in) :: energy
-        !     real(rp), intent(in) :: wavevec
-        ! end function delta_int
+        !     real(rp), intent(in) :: energy, r1, r2, u1, u2
+        ! end function partial_cross_section_int
 
     end interface
 
@@ -80,21 +97,7 @@ module potential_type
     !! TODO introduce deferred stuff
 
     end type
-    ! Perhaps put LennardJones_t in its own module
-    ! type, extends(Potential_t) :: LennardJones_t
-    ! real(rp) :: eps=5.9, rho=3.57 ! meV, angstrom
-    ! end type LennardJones_t
-
-    ! interface LennardJones_t
-    !     module procedure :: lennardjones_construct
-    ! end interface LennardJones_t
 contains
-
-! pure real(rp) function getAlpha(this) result(alpha)
-!     !! returns 2m/hbar^2, called alpha in Thijssen
-!     class(Potential_t), intent(in) :: this
-!     alpha = 1
-! end function getAlpha
 
 pure subroutine init_potential(this, maxE, minE, numE, lmax, start_r, end_r, rstep)
     !! generic constructor used inside extended constructors
@@ -121,8 +124,38 @@ pure elemental real(rp) function potential_harmonic(this, r) result(retval)
     implicit none
     class(Harmonic_Potential_t), intent(in) :: this
     real(rp), intent(in) :: r
-    retval = r*r
+    retval = this%alpha * r*r
 end function potential_harmonic
+
+pure real(rp) function calc_delta(this, l, energy, r1, r2, u1, u2) result(delta)
+    implicit none
+    !! Thijssen eq 2.9
+    class(Potential_t), intent(in) :: this
+    integer, intent(in) :: l
+    real(rp), intent(in) :: energy, r1, r2, u1, u2
+    real(rp) :: K, wavevec
+
+    wavevec = sqrt(this%alpha * energy)
+
+    K = (r1*u2)/(r2*u1)
+    delta = (K*sphJ(l, r1*wavevec) - sphJ(l, wavevec*r2))
+    delta = delta/(K*sphN(l, wavevec*r1) - sphN(l, wavevec*r2))
+    delta = atan(delta)
+
+end function calc_delta
+
+pure real(rp) function partial_cross_section(this, l, energy, r1, r2, u1, u2) result(sigma_l)
+    implicit none
+    class(Potential_t), intent(in) :: this
+    integer, intent(in) :: l
+    real(rp), intent(in) :: energy, r1, r2, u1, u2
+    real(rp) :: delta, sdl, k2
+    delta = calc_delta(this, l, energy, r1, r2, u1, u2)
+    sdl = sin(delta)
+    k2 = this%alpha * energy ! 2mE/hbar^2
+    sigma_l = 4*pi*sdl*sdl/k2
+
+end function partial_cross_section
 
 end module potential_type
 
@@ -197,14 +230,3 @@ end module potential_type
 !     end if
 
 ! end subroutine solve
-
-! pure real(rp) function calc_delta(this, l, energy, wavevec) result(delta)
-!     implicit none
-!     class(Potential_t), intent(in) :: this
-!     integer, intent(in) :: l
-!     real(rp), intent(in) :: energy
-!     real(rp), intent(in) :: wavevec ! can be derived from the rest but expensive
-
-!     delta = -1 ! TODO stub!
-
-! end function calc_delta

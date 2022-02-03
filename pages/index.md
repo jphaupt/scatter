@@ -8,16 +8,16 @@ In rough order:
 (and you've done it before)
 remember:
     - clean code
-    - TDD
-keep in mind (maybe do a bit later)
- - OOP if possible
- - function pointers? e.g. in case we want something other than Lenard-Jones
-For this part, I will largely refer to *Computational Physics* by Thijssen.
+    - remember TDD (use this as a learning opportunity)
+ - OOP if possible (and done)
+ - Not using function pointers, but instead using class objects, which I think is a lot cleaner anyway. If the potential changes, we can simply write a new class.
 
 - regression testing
 https://cmake.org/cmake/help/book/mastering-cmake/chapter/Testing%20With%20CMake%20and%20CTest.html
 https://stackoverflow.com/questions/19435375/simple-integration-testing-using-bash-with-cmake-and-ctest
-probably use `add_test(... COMMAND ..)` and use a Python command to compare two (hopefully identical up to precision) text documents. 
+probably use `add_test(... COMMAND ..)` and use a Python command to compare two (hopefully identical up to precision) text documents.
+https://cmake.org/cmake/help/latest/command/exec_program.html
+https://stackoverflow.com/questions/25437632/cmake-run-built-executable-before-building-another
 
 - parallelise the cross section calculation (MPI probably), test with PFUnit
 
