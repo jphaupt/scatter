@@ -8,16 +8,8 @@ module integrate
    implicit none
 
    private
-   public :: numerov, deltaPhase, numerov_thijssen
+   public :: numerov, numerov_thijssen
 contains
-
-   pure real(rp) function deltaPhase(angularL, Gquot, R2) result(delta)
-      implicit none
-      integer, intent(in) :: angularL
-      real(rp), intent(in) :: Gquot, R2
-      !!
-      delta = -1._rp ! TODO stub
-   end function
 
     pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_, sols)
       implicit none
@@ -39,10 +31,10 @@ contains
 
       integer :: i
 
-      if (present(sols)) allocate(sols(steps_tot+1)) 
+      if (present(sols)) allocate(sols(steps_tot+1))
       rsep = pi/sqrt(energy)/pot%alpha
       if (present(rsep_)) rsep = rsep_
-      
+
 
       hstep = nextPoint - startPoint
       hstep_sq = hstep*hstep

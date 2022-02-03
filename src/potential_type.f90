@@ -12,14 +12,8 @@ module potential_type
     type, abstract :: Potential_t
     !! object containing information about the scattering potential, such as
     !! the reduced mass, and potential parameters (epsilon, r0)
-    !!
-    !! @todo add potential function that returns value at given separation.
-    !!       Make this a function pointer or similar based on input file
-    !! @endtodo
 
     ! defaults to H-Kr collision
-    ! ??? where's rho? I guess absolved into rydConst?
-    ! mu=3.57,
     real(rp) :: maxE=3.5, minE=0.1, &
             &   start_r=0.75, end_r=5.0, rstep=0.02
     integer :: lmax=6, numE=200
@@ -32,13 +26,8 @@ module potential_type
 
     contains
 
-        !! TODO not really sure what the point of the interface is??
         procedure(pot_int), pass(this), deferred :: potential
-        ! procedure, pass(this) :: getAlpha
-        ! procedure(sol_int), pass(this), deferred :: solve
-        ! procedure(delta_int), pass(this), deferred :: calc_delta
         procedure, pass(this) :: init_potential ! helper for extended constructors
-        ! procedure(partial_cross_section_int), pass(this) :: partial_cross_section
         procedure, pass(this) :: partial_cross_section
 
     end type Potential_t
@@ -58,35 +47,12 @@ module potential_type
             real(rp), intent(in) :: r
         end function pot_int
 
-        ! TODO !!!
-        ! subroutine sol_int(this, verbose_, tofile_, storeData_)
-        !     import rp
-        !     import Potential_t
-        !     class(Potential_t), intent(inout) :: this ! inout necessary only if storeE
-        !     logical, intent(in), optional :: verbose_, tofile_, storeData_
-        ! end subroutine sol_int
-
         pure real(rp) function delta_int(this, l, energy, r1, r2, u1, u2) result(delta)
             import rp, Potential_t
             class(Potential_t), intent(in) :: this
             integer, intent(in) :: l
             real(rp), intent(in) :: energy, r1, r2, u1, u2
         end function delta_int
-
-        ! ! int for interface
-        ! though not sure if needed in this case?! review Curcic
-        ! I think only needed if it gets deferred, which it isn't here
-        ! pure real(rp) function partial_cross_section_int(this, l, energy, r1, r2, u1, u2) result(sigma_l)
-        !     !! @note this function may be deprecated once we do loss rates,
-        !     !! it assumes integration over the full domain, which is not true
-        !     !! for the application of interest
-        !     !! @endnote
-        !     !! however, if I do implement that this would be helpful for testing
-        !     import rp, Potential_t
-        !     class(Potential_t), intent(in) :: this
-        !     integer, intent(in) :: l
-        !     real(rp), intent(in) :: energy, r1, r2, u1, u2
-        ! end function partial_cross_section_int
 
     end interface
 
@@ -145,6 +111,10 @@ pure real(rp) function calc_delta(this, l, energy, r1, r2, u1, u2) result(delta)
 end function calc_delta
 
 pure real(rp) function partial_cross_section(this, l, energy, r1, r2, u1, u2) result(sigma_l)
+!     !! @note this function may be deprecated once we do loss rates,
+!     !! it assumes integration over the full domain, which is not true
+!     !! for the application of interest
+!     !! @endnote
     implicit none
     class(Potential_t), intent(in) :: this
     integer, intent(in) :: l
@@ -158,30 +128,6 @@ pure real(rp) function partial_cross_section(this, l, energy, r1, r2, u1, u2) re
 end function partial_cross_section
 
 end module potential_type
-
-! ! would be nice if you could have some kind of interface for this?
-
-! pure real(rp) function potential(this, r) result(retval)
-!     !! ??? this will become a pointer like
-!     !! potential => potential_LennardJones, potential_harmonic, etc
-!     !! for now, it is the harmonic potential, scaled by mu
-!     implicit none
-!     ! must be class, not type, to allow for polymorphism
-!     class(Potential_t), intent(in) :: this
-!     real(rp), intent(in) :: r
-
-!     retval = this%mu*r*r
-
-! end function potential
-
-! subroutine set_value(this,  some_val)
-!     implicit none
-!     class(Potential_t), intent(inout) :: this
-!     real(rp), intent(out) ::  some_val
-
-!     this%some_val = some_val
-
-! end subroutine set_value
 
 ! ! this subroutine cannot be pure because it may also produce a file
 ! subroutine solve(this, verbose_, tofile_, storeData_)
