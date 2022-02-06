@@ -1,9 +1,12 @@
 module solver_type
     !! the main driver for the calculation
+    !! @todo MPI drivers I think will be here
     use precision, only: rp
     use special_functions, only: sphJ => sphericalJ, sphN => sphericalN
     use potential_type, only: Potential_t, Potential_LennardJones_t
     use json_module
+    use integrate, only: numerov, radialRHS
+    ! TODO figure out how to make an external member function
     implicit none
 
     public :: Solver_t, json_get_helper
@@ -15,11 +18,15 @@ module solver_type
         !! not sure if this should be a pointer or allocatable variable
         character(len=:), allocatable :: filename
         real(rp) :: maxE=3.5, minE=0.1, &
-                &   start_r=0.75, end_r=5.0, rstep=0.02
+                &   start_r=0.75, end_r=5.0, rstep=0.02 !, &
+                ! &   startPt, startVal, nextPt, nextVal
         integer :: lmax=6, numE=200
 
     contains
         procedure, pass(this) :: read_LennardJones
+        procedure, pass(this) :: numerov => numerov_solver
+        procedure, pass(this) :: calc_full_cross_section
+        ! no idea if you can do this (creates circular dependency as written)
 
     end type Solver_t
 
@@ -136,5 +143,68 @@ contains
         call config%get(varname, var, found); if (.not. found) &
  &       print *, "using default "//varname
     end subroutine json_get_helper_int
+
+
+    pure subroutine numerov_solver(this, l, energy, endPoint1, endVal1, endPoint2, endVal2, rsep_)
+        !! wrapper function for the Numerov function below for use in the Solver
+        !! type (OOP approach)
+        !! this does not store the solution
+        implicit none
+        class(Solver_t), intent(in) :: this
+        real(rp), intent(out) :: endPoint1, endVal1, endPoint2, endVal2
+        real(rp), intent(in), optional :: rsep_
+        real(rp), intent(in) :: energy
+        integer, intent(in) :: l
+        real(rp) :: startVal, nextVal
+        real(rp) :: h_sq, h2f, h2fnext, h2fprev, deriv
+        integer :: maxI
+        maxI = nint((this%end_r-this%start_r)/this%rstep)
+        startVal = this%pot%small_r_solution(this%start_r)
+        ! nextVal complicated to get...
+        ! see equations A.53 and A.54
+        h_sq = this%rstep * this%rstep
+        deriv = this%pot%small_r_derivative(this%start_r) ! at r=0
+        h2f = h_sq * radialRHS(this%pot, this%start_r, l, energy) ! at r=0
+        ! at r=h
+        h2fnext = h_sq * radialRHS(this%pot, this%start_r+this%rstep, l, energy)
+        ! at r=-h
+        h2fprev = h_sq * radialRHS(this%pot, this%start_r-this%rstep, l, energy)
+        nextVal = ((2_rp + 5*h2f/6)*(1_rp - h2fprev/12)*startVal &
+        &         + 2*this%rstep*deriv*(1_rp - h2fprev)/6) &
+        &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
+        &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
+
+        call numerov(this%pot, this%start_r, startVal, this%start_r+this%rstep,&
+        &            nextVal, l, energy, maxI, endPoint1, endVal1, endPoint2, &
+        &            endVal2, rsep_=this%pot%get_wavelength(energy)/4_rp)
+
+    end subroutine numerov_solver
+
+    subroutine calc_full_cross_section(this)
+        !! calculates the full cross section given all the parameters in Solver
+        !! @todo output to file!
+        implicit none
+        class(Solver_t) :: this
+
+        real(rp) :: E_curr, dE, sigma_tot
+        integer :: l
+        real(rp) :: r1, r2, u1, u2
+        dE = (this%maxE - this%minE)/this%numE
+        ! TODO !!!
+        E_loop: do while (E_curr <= this%maxE)
+            sigma_tot = 0
+            E_curr = E_curr + dE
+            l_loop: do l=1,this%lmax
+                call this%numerov(l, E_curr, r1, u1, r2, u2)
+                sigma_tot = sigma_tot &
+                &   + this%pot%partial_cross_section(l, E_curr, r1, r2, u1, u2)
+                print*, l
+                ! TODO
+            end do l_loop
+            print*, E_curr, sigma_tot
+        end do E_loop
+        ! print*, "stub"
+    end subroutine
+
 
 end module solver_type
