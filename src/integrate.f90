@@ -5,23 +5,38 @@ module integrate
    use special_functions, only: sphericalJ, sphericalN
    use potential_type, only: Potential_t
    use constants, only: pi
+   use solver_type, only: Solver_t
    implicit none
 
    private
-   public :: numerov, numerov_thijssen
+   public :: numerov, numerov_thijssen, numerov_solver
 contains
 
-    pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, l_ang, energy, steps_tot, rsep_, sols)
+    pure subroutine numerov_solver(this, rsep_)
+        !! wrapper function for the Numerov function below for use in the Solver
+        !! type (OOP approach)
+        !! this does not store the solution
+        implicit none
+        class(Solver_t), intent(in) :: this
+        real(rp), intent(in), optional :: rsep_
+        ! TODO
+        ! call numerov(this%pot, this%start_r, this%)
+
+    end subroutine numerov_solver
+
+    pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, &
+    & l_ang, energy, steps_tot, endPoint1, endVal1, endPoint2, endVal2, rsep_, sols)
       implicit none
       class(Potential_t), intent(in) :: pot
-      real(rp), intent(inout) :: startPoint, startVal, nextPoint, nextVal
-      !! starting value of r, u(r) and the immediate successor. These are
-      !! replaced by the solution values r1, u(r1), r2, u(r2)
-      !! steps_tot also gets updated to be up to where the r2 is
+      real(rp), intent(in) :: startPoint, startVal, nextPoint, nextVal
+      !! starting value of r, u(r) and the immediate successor
       real(rp), intent(in) :: energy
       integer, intent(in) :: l_ang
       integer, intent(inout) :: steps_tot
+      !! steps_tot gets updated to be up to where the r2 is
       real(rp), intent(in), optional :: rsep_
+      real(rp), intent(out) :: endPoint1, endVal1, endPoint2, endVal2
+        !! solution values r1, u(r1), r2, u(r2)
       real(rp) :: rsep
       real(rp) :: hstep, hstep_sq !hstep2
       real(rp) :: wprev, wcurr, wnext, ucurr, unext
@@ -70,8 +85,8 @@ contains
         ucurr = getU(wcurr, fval, hstep_sq)
         if (allocated(sols)) sols(i+1) = ucurr
       enddo
-      startVal = ucurr
-      startPoint = position
+      endVal1 = ucurr
+      endPoint1 = position
 
       steps_tot = int(rsep/hstep)
       do i=1, steps_tot
@@ -86,8 +101,8 @@ contains
         ! TODO sols
         ! if (allocated(sols)) sols(i+1) = ucurr
       enddo
-      nextPoint = position
-      nextVal = ucurr
+      endPoint2 = position
+      endVal2 = ucurr
 
     end subroutine numerov
 

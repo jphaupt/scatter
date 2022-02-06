@@ -61,6 +61,7 @@ module test_integrate
         real(rp) :: K
         real(rp) :: quartWave, secR
         real(rp) :: startPt=0.0, startVal, nextVal, nextPt ! I think..
+        real(rp) :: endpt1, endval1, endpt2, endval2
         integer :: i
         real(rp) :: phiend1, phiend2, r1_thij, r2_thij
         real(rp) :: A, tmp, rcurr
@@ -83,15 +84,16 @@ module test_integrate
         phiend2 = solution(secMaxI+1)
         r1_thij = r(maxI+1)
         r2_thij = r(secMaxI+1)
-        call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, quartWave, sols)
+        call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, &
+        &    endpt1, endval1, endpt2, endval2, quartWave, sols)
         ! print*, "r1", r1_thij, startPt
         ! print*, "phiend1", phiend1, startVal
         ! print*, "sol_thij", solution(1:maxI+1)
         ! print*, "sol_mine", sols
-        @assertEqual(r1_thij, startPt, tolerance=1.e-8_rp)
-        @assertEqual(phiend1, startVal, tolerance=1.e-8_rp)
-        @assertEqual(r2_thij, nextPt, tolerance=1.e-8_rp, message='very last point')
-        @assertEqual(phiend2, nextVal, tolerance=1.e-8_rp)
+        @assertEqual(r1_thij, endPt1, tolerance=1.e-8_rp)
+        @assertEqual(phiend1, endVal1, tolerance=1.e-8_rp)
+        @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
+        @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
     end subroutine test_numerov_against_thijssen_harmonic
 
     ! pure real(rp) function harmonic_sol(r,h) result(retval)

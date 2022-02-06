@@ -101,14 +101,37 @@ module potential_type
 
     contains
     procedure, pass(this) :: potential => potential_LennardJones
+    procedure, pass(this) :: small_r_solution => small_r_solution_LennardJones
+    procedure, pass(this) :: small_r_derivative => small_r_derivative_LennardJones
     ! procedure, pass(this) :: init_potential => init_potential_LennardJones
     ! TODO constructor, potential function, define alpha, ...
+    ! TODO there are some functions and values I must still implement...
 
     end type Potential_LennardJones_t
     interface Potential_LennardJones_t
         module procedure :: constructor_LennardJones
     end interface Potential_LennardJones_t
 contains
+
+pure elemental real(rp) function small_r_solution_LennardJones(this, r) result(retval)
+    !! solution to the spherical Schrodinger equation with a Lennard-Jones 
+    !! potential for small r (see eq 2.17 of Thijssen)
+    class(Potential_LennardJones_t), intent(in) :: this
+    real(rp), intent(in) :: r
+    real(rp) :: const
+    const = sqrt(this%alpha * this%epsilon / 25)
+    retVal = exp(-const * r**(-5))
+end function small_r_solution_LennardJones
+
+pure elemental real(rp) function small_r_derivative_LennardJones(this, r) result(retval)
+    !! derivative at small r
+    class(Potential_LennardJones_t), intent(in) :: this
+    real(rp), intent(in) :: r
+    real(rp) :: const
+    const = sqrt(this%alpha * this%epsilon / 25)
+    retVal = 5*const*r**(-6)*this%small_r_solution(r)
+
+end function small_r_derivative_LennardJones
 
 pure elemental real(rp) function potential_LennardJones(this, r) result(retval)
     !! Potential function for the Lennard-Jones potential

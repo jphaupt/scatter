@@ -32,7 +32,7 @@ module solver_type
         module procedure :: json_get_helper_real, json_get_helper_int
     end interface json_get_helper
 
-    ! procedure :: json_get_helper => 
+    ! procedure :: json_get_helper =>
 contains
 
 ! this function cannot be pure because it reads the JSON file
@@ -50,7 +50,7 @@ contains
         end if
         call config%initialize(comment_char='//')
         ! load file
-        call config%load_file(this%filename)
+        call config%load(this%filename)
         if (config%failed()) then
             print *, "Please include an input file!"
             stop
@@ -90,7 +90,6 @@ contains
         call json_get_helper(config, 'start_r', this%start_r)
         call json_get_helper(config, 'end_r', this%end_r)
         call json_get_helper(config, 'maxE', this%maxE)
-        ! TODO
 
     end subroutine read_general
 
@@ -114,13 +113,16 @@ contains
 
     subroutine json_get_helper_real(config, varname, var)
     !! just a simple helper for when I need to run config%get with defaults
-    !! right now only works for real var
         implicit none
         type(json_file), intent(inout) :: config
         character(*), intent(in) :: varname
         logical :: found
-        real(rp), intent(inout) :: var
-        call config%get(varname, var, found); if (.not. found) &
+        real(rp), intent(out) :: var
+        integer :: test
+        ! TODO for some reason it doesn't like reals...
+        ! make sure to build json-fortran with the same type as this program!
+        ! (I default to real64, they default to real32)
+        call config%get(varname, test, found); if (.not. found) &
  &       print *, "using default "//varname
     end subroutine json_get_helper_real
 
@@ -130,7 +132,7 @@ contains
         type(json_file), intent(inout) :: config
         character(*), intent(in) :: varname
         logical :: found
-        integer, intent(inout) :: var
+        integer, intent(out) :: var
         call config%get(varname, var, found); if (.not. found) &
  &       print *, "using default "//varname
     end subroutine json_get_helper_int
