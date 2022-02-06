@@ -6,12 +6,17 @@ module solver_type
     use json_module
     implicit none
 
+    public :: Solver_t, json_get_helper
+
     type :: Solver_t
         !! type containing all the system data, including the potential, min and
         !! max energy, maximum l, etc.
         class(Potential_t), allocatable :: pot
         !! not sure if this should be a pointer or allocatable variable
         character(len=:), allocatable :: filename
+        real(rp) :: maxE=3.5, minE=0.1, &
+                &   start_r=0.75, end_r=5.0, rstep=0.02
+        integer :: lmax=6, numE=200
 
     contains
         procedure, pass(this) :: read_LennardJones
@@ -22,6 +27,12 @@ module solver_type
         module procedure :: constructor_solver
     end interface Solver_t
 
+    ! generic procedure
+    interface json_get_helper
+        module procedure :: json_get_helper_real, json_get_helper_int
+    end interface json_get_helper
+
+    ! procedure :: json_get_helper => 
 contains
 
 ! this function cannot be pure because it reads the JSON file
@@ -44,8 +55,6 @@ contains
             print *, "Please include an input file!"
             stop
         end if
-        ! TODO tmp delete
-        call config%get('x', x, found)
         ! get the type of the potential
         call config%get('potential_name', pot_name, found)
         if (.not. found) then
@@ -66,8 +75,27 @@ contains
 
     end function constructor_solver
 
+    subroutine read_general(this, config)
+        !! initalises paramers in the solver that are not potential-specific
+        !! such as maximum l angular momentum, maximum energy, minimum r, etc
+        implicit none
+        class(Solver_t), intent(inout) :: this
+        type(json_file), intent(inout) :: config
+        ! real(rp) :: maxE, minE, numE, lmax, start_r, end_r, rstep
+        ! TODO test this one to make sure values actually change
+        call json_get_helper(config, 'maxE', this%maxE)
+        call json_get_helper(config, 'minE', this%minE)
+        call json_get_helper(config, 'numE', this%numE)
+        call json_get_helper(config, 'lmax', this%lmax)
+        call json_get_helper(config, 'start_r', this%start_r)
+        call json_get_helper(config, 'end_r', this%end_r)
+        call json_get_helper(config, 'maxE', this%maxE)
+        ! TODO
+
+    end subroutine read_general
+
     subroutine read_LennardJones(this, config)
-    !! initialises the Lennard-Jones potential from a JSON file
+        !! initialises the Lennard-Jones potential from a JSON file
         implicit none
         class(Solver_t), intent(inout) :: this
         type(json_file), intent(inout) :: config
@@ -84,16 +112,27 @@ contains
         this%pot = Potential_LennardJones_t(m1, m2, rho, epsilon)
     end subroutine read_LennardJones
 
-    subroutine json_get_helper(config, varname, var)
+    subroutine json_get_helper_real(config, varname, var)
     !! just a simple helper for when I need to run config%get with defaults
     !! right now only works for real var
         implicit none
         type(json_file), intent(inout) :: config
-        character(*) :: varname
+        character(*), intent(in) :: varname
         logical :: found
-        real(rp) :: var
+        real(rp), intent(inout) :: var
         call config%get(varname, var, found); if (.not. found) &
  &       print *, "using default "//varname
-    end subroutine json_get_helper
+    end subroutine json_get_helper_real
+
+    subroutine json_get_helper_int(config, varname, var)
+    !! there should be a better way to do this with less repetition
+        implicit none
+        type(json_file), intent(inout) :: config
+        character(*), intent(in) :: varname
+        logical :: found
+        integer, intent(inout) :: var
+        call config%get(varname, var, found); if (.not. found) &
+ &       print *, "using default "//varname
+    end subroutine json_get_helper_int
 
 end module solver_type
