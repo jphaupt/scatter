@@ -20,6 +20,11 @@ module potential_type
         real(rp) :: maxE = 3.5, minE = 0.1, &
                 &   start_r = 0.75, end_r = 5.0, rstep = 0.02
         integer :: lmax = 6, numE = 200
+        !! @todo delete all the values above!
+        real(rp) :: m1 = 1.008
+        !! mass of first atom in Daltons
+        real(rp) :: m2 = 83.798
+        !! mass of second atom in Daltons
         ! real(rp) :: rydConst ! = 0.48*mu*mu, not initialised in constructor
 
         ! real(rp) :: some_val
@@ -107,10 +112,6 @@ module potential_type
         !! rho in angstrom
         real(rp) :: epsilon = 5.9
         !! epsilon in meV
-        real(rp) :: m1 = 1.008
-        !! mass of first atom in Daltons
-        real(rp) :: m2 = 83.798
-        !! mass of second atom in Daltons
         ! real(rp) :: alpha=6.1
         ! @note you have to call the constructor to initialise alpha!
         ! (2*(1 Dalton)*(1.008*83.798)/(83.798+1.008)/hbar^2) *meV * (3.57 angstrom)^2 = 6.07
@@ -179,6 +180,7 @@ contains
         if (present(m2)) this%m2 = m2
         if (present(rho)) this%rho = rho
         if (present(epsilon)) this%epsilon = epsilon
+        !! TODO !! m1 and m2 are not defined!!!
         this%alpha = 2*(this%m1*this%m2)/(this%m1 + this%m2)/hbar_sq
         this%alpha = this%alpha*this%rho*this%rho ! units of rho^-2 meV
     end function constructor_LennardJones
@@ -271,66 +273,10 @@ contains
         delta = calc_delta(this, l, energy, r1, r2, u1, u2)
         sdl = sin(delta)
         k2 = this%alpha*energy ! 2mE/hbar^2
-        sigma_l = 4*pi*sdl*sdl/k2
+        sigma_l = (2*l+1)*4*pi*sdl*sdl/k2 ! TODO Not totally surer about 2*l+1 !
+        ! sigma_l = 4*pi*sdl*sdl/k2 ! TODO Not totally surer about 2*l+1 !
 
     end function partial_cross_section
-
-! this subroutine cannot be pure because it may also produce a file
-    subroutine solve(this, verbose_, tofile_, storeData_)
-        class(Potential_t), intent(inout) :: this ! inout necessary only if storeE
-        !! the potential for the problem
-        logical, intent(in), optional :: verbose_
-        !! whether or not to print to stdout (default false)
-        logical, intent(in), optional :: tofile_
-        !! whether or not to send data to a file (default true)
-        logical, intent(in), optional :: storeData_
-        !! whether ot not to keep data in memory for further calculations (default false)
-
-        logical :: verbose = .true., tofile = .true., storeData = .false.
-
-        integer :: fileunit
-        real(rp) :: dE, E_curr, denom, sig = 0., delta
-        integer :: i, l
-
-        verbose = .false.
-        tofile = .true.
-        storeData = .false.
-        if (present(verbose_)) verbose = verbose_
-        if (present(tofile_)) tofile = tofile_
-        if (present(storeData_)) storeData = storeData_
-
-        ! TODO implement
-        ! if (storeData) allocate(this%data(this%numE, 2))
-
-        ! dE = (this%maxE - this%minE)/this%numE
-        ! E_curr = this%minE
-
-        ! if (tofile) then
-        !     open(newunit=fileunit, file='sigma.dat')
-        !     write(fileunit, *) '# energy sigma_tot'
-        ! end if
-
-        ! if (verbose) write(stdout, *) 'iteration energy sigma tan(delta)'
-
-        ! do i=1, this%numE ! +1 ! should I include a +1 here?
-        !     denom = sqrt(this%alpha * E_curr)! TODO
-        !     do l=0, this%lmax
-        !         delta = this%calc_delta(l, E_curr, denom)
-        !         sig = sig + 4*pi/(denom*denom)*(2*l+1)*sin(delta)**2
-        !     end do
-        !     E_curr = E_curr + dE
-        !     if (tofile) write(fileunit, *) E_curr, sig
-        !     if (verbose) write(stdout, *) i, E_curr, sig, tan(delta)
-        ! end do
-
-        ! print*,this%end_r ! TODO STUB
-
-        ! if (tofile) then
-        !     if (verbose) write(stdout, *) 'cross section written to sigma.dat'
-        !     close(fileunit)
-        ! end if
-
-    end subroutine solve
 
     pure real(rp) function get_wavelength(this, energy) result(wvl)
         class(Potential_t), intent(in) :: this

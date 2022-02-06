@@ -1,5 +1,5 @@
 module test_integrate
-    use potential_type, only: Potential_t, Potential_Harmonic_t
+    use potential_type, only: Potential_t, Potential_Harmonic_t, Potential_LennardJones_t
     use integrate, only: numerov_thijssen, numerov
     use precision, only: rp
     use constants, only: pi
@@ -65,7 +65,7 @@ module test_integrate
         integer :: i
         real(rp) :: phiend1, phiend2, r1_thij, r2_thij
         real(rp) :: A, tmp, rcurr
-        real(rp), allocatable :: sols(:)
+        ! real(rp), allocatable :: sols(:)
 
         type(Potential_Harmonic_t) :: pot
         pot = Potential_Harmonic_t() ! constructor unnecessary in this case
@@ -85,7 +85,7 @@ module test_integrate
         r1_thij = r(maxI+1)
         r2_thij = r(secMaxI+1)
         call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, &
-        &    endpt1, endval1, endpt2, endval2, quartWave, sols)
+        &    endpt1, endval1, endpt2, endval2, quartWave) !, sols)
         ! print*, "r1", r1_thij, startPt
         ! print*, "phiend1", phiend1, startVal
         ! print*, "sol_thij", solution(1:maxI+1)
@@ -95,25 +95,79 @@ module test_integrate
         @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
         @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
     end subroutine test_numerov_against_thijssen_harmonic
+    @test
+    subroutine test_numerov_against_thijssen_LJ()
+        ! tests my Numerov implementation against Thijssen's implementation
+        real(rp) :: energy=3.0
+        real(rp) :: hstep = 0.02, maxDist=4.0
+        integer :: secMaxI, maxI, l=0
+        integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
+        real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
+        real(rp) :: K
+        real(rp) :: quartWave, secR
+        real(rp) :: startPt=0.0, startVal, nextVal, nextPt ! I think..
+        real(rp) :: endpt1, endval1, endpt2, endval2
+        integer :: i
+        real(rp) :: phiend1, phiend2, r1_thij, r2_thij
+        real(rp) :: A, tmp, rcurr
+        ! real(rp), allocatable :: sols(:)
+
+        type(Potential_LennardJones_t) :: pot
+        pot = Potential_LennardJones_t() ! constructor unnecessary in this case
+        maxI = nint((maxDist-startPt)/hstep)
+        K = sqrt(energy)
+        quartWave = 0.5D0*PI/K
+        secR = maxDist + quartWave
+        secMaxI = int((secR-startPt)/hstep)
+        r = [((i-1)*hstep, i=1, secMaxI+1)]
+        FArr = LJF(r, energy)
+        startVal = 0 ! how could this possibly be the value at r=0?? n=1 I guess
+        nextVal = hstep
+        nextPt = hstep
+        call numerov_thijssen(hstep, 1, secMaxI+1, maxSol, FArr, .false., startVal, nextVal, solution)
+        phiend1 = solution(maxI+1)
+        phiend2 = solution(secMaxI+1)
+        r1_thij = r(maxI+1)
+        r2_thij = r(secMaxI+1)
+        call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, &
+        &    endpt1, endval1, endpt2, endval2, quartWave) !, sols)
+        ! print*, "r1", r1_thij, startPt
+        ! print*, "phiend1", phiend1, startVal
+        ! print*, "sol_thij", solution(1:maxI+1)
+        ! print*, "sol_mine", sols
+        @assertEqual(r1_thij, endPt1, tolerance=1.e-8_rp)
+        @assertEqual(phiend1, endVal1, tolerance=1.e-8_rp)
+        @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
+        @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
+    end subroutine test_numerov_against_thijssen_LJ
 
     ! pure real(rp) function harmonic_sol(r,h) result(retval)
     ! real(rp), intent(in) :: r,h
     ! retval = r * exp(-r*r/2) * exp(h*h/2)
     ! end function harmonic_sol
     pure elemental real(rp) function harmonicF(r, energy) result(V_eff)
-        implicit none
-        !! helper function for numerov_thijssen
-        !! returns the RHS of the radial Schroedinger equation, called F in
-        !! equation 2.10 in Thijssen
-        !! note this is actually 2*m/hbar^2 * F but at least for now the prefactor
-        !! is unity
-        ! class(Potential_t), intent(in) :: pot
-        ! integer, intent(in) :: l ! assume = 0
-        ! no alpha, assume harmonic
-        real(rp), intent(in) :: r, energy
+    implicit none
+    !! helper function for numerov_thijssen
+    !! returns the RHS of the radial Schroedinger equation, called F in
+    !! equation 2.10 in Thijssen
+    !! note this is actually 2*m/hbar^2 * F but at least for now the prefactor
+    !! is unity
+    ! class(Potential_t), intent(in) :: pot
+    ! integer, intent(in) :: l ! assume = 0
+    ! no alpha, assume harmonic
+    real(rp), intent(in) :: r, energy
 
-        ! V_eff = 2*r*r - energy
-        V_eff = r*r-energy !*2.
+    ! V_eff = 2*r*r - energy
+    V_eff = r*r-energy !*2.
 
-    end function harmonicF
+end function harmonicF
+pure elemental real(rp) function LJF(r, energy) result(V_eff)
+    implicit none
+    real(rp), intent(in) :: r, energy
+    real(rp) :: alpha
+    alpha = 6.1
+    V_eff = -1 ! TODO!
+    ! V_eff = L*(L+1)/R2 + RydConst*Epsilon*(1.D0/R12 - 2.D0/R6) - RydConst*Ener
+
+end function LJF
  end module test_integrate

@@ -21,6 +21,7 @@ module solver_type
                 &   start_r=0.75, end_r=5.0, rstep=0.02 !, &
                 ! &   startPt, startVal, nextPt, nextVal
         integer :: lmax=6, numE=200
+            !! @todo these two are not set properly without an input file
 
     contains
         procedure, pass(this) :: read_LennardJones
@@ -48,7 +49,6 @@ contains
         character(*), optional, intent(in) :: filename
         type(json_file) :: config
         logical :: found
-        real(rp) :: x
         character(len=:), allocatable :: pot_name
         if (present(filename)) then
             this%filename = filename
@@ -75,10 +75,9 @@ contains
         case default
             print *, "Potential type "//trim(pot_name)//" not yet implemented"
             print *, "(Remember, it is case sensitive!)"
+            stop
         end select
-        ! TODO read_general(this, config) ! to get maxE, lmax, etc.
-    !! TODO
-        allocate (Potential_LennardJones_t::this%pot)
+        call read_general(this, config) ! to get maxE, lmax, etc.
 
     end function constructor_solver
 
@@ -106,6 +105,7 @@ contains
         class(Solver_t), intent(inout) :: this
         type(json_file), intent(inout) :: config
         real(rp) :: epsilon, rho, m1, m2
+            !! hacky fix: no skipped variables, still not working somehow :/
         ! ensure Lennard-Jones potential
         allocate (Potential_LennardJones_t::this%pot)
         ! in order for %get to work here, json_file must be inout for some reason
@@ -115,6 +115,7 @@ contains
         call json_get_helper(config, 'epsilon', epsilon)
         call json_get_helper(config, 'rho', rho)
         ! constructor for Lennard-Jones potential
+        !! TODO !! the constructor below is taking the uninitialized variables!
         this%pot = Potential_LennardJones_t(m1, m2, rho, epsilon)
     end subroutine read_LennardJones
 
@@ -125,12 +126,14 @@ contains
         character(*), intent(in) :: varname
         logical :: found
         real(rp), intent(out) :: var
-        integer :: test
         ! TODO for some reason it doesn't like reals...
         ! make sure to build json-fortran with the same type as this program!
         ! (I default to real64, they default to real32)
-        call config%get(varname, test, found); if (.not. found) &
- &       print *, "using default "//varname
+        call config%get(varname, var, found);
+        if (.not. found) then
+            print *, "default values not yet enabled "//varname
+            stop
+        end if
     end subroutine json_get_helper_real
 
     subroutine json_get_helper_int(config, varname, var)
@@ -140,8 +143,11 @@ contains
         character(*), intent(in) :: varname
         logical :: found
         integer, intent(out) :: var
-        call config%get(varname, var, found); if (.not. found) &
- &       print *, "using default "//varname
+        call config%get(varname, var, found)
+        if (.not. found) then
+            print *, "default values not yet enabled "//varname
+            stop
+        end if
     end subroutine json_get_helper_int
 
 
@@ -189,19 +195,33 @@ contains
         real(rp) :: E_curr, dE, sigma_tot
         integer :: l
         real(rp) :: r1, r2, u1, u2
+        !! @todo
+        !! for some reason, numE is zero here, looks like the default doesn't work
+        !! properly...
+        !! same thing with lmax
+        !! @endtodo
         dE = (this%maxE - this%minE)/this%numE
+        ! print*, this%maxE
+        ! print*, this%minE
+        ! print*, this%numE
+        ! print*, dE
+        E_curr = this%minE
         ! TODO !!!
         E_loop: do while (E_curr <= this%maxE)
+            print*, "E", E_curr
+            print*, "r1,u1,r2,u2"
             sigma_tot = 0
-            E_curr = E_curr + dE
             l_loop: do l=1,this%lmax
                 call this%numerov(l, E_curr, r1, u1, r2, u2)
+                print*, r1,u1,r2,u2
+                ! TODO numerov values blow the fuck up
+                ! TODO numerov needs even more testing :(
                 sigma_tot = sigma_tot &
                 &   + this%pot%partial_cross_section(l, E_curr, r1, r2, u1, u2)
-                print*, l
-                ! TODO
+                ! print*, l
             end do l_loop
-            print*, E_curr, sigma_tot
+            E_curr = E_curr + dE
+            ! print*, E_curr, sigma_tot
         end do E_loop
         ! print*, "stub"
     end subroutine

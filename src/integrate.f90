@@ -12,7 +12,7 @@ module integrate
     public :: numerov, numerov_thijssen, radialRHS ! , numerov_solver
 contains
     pure subroutine numerov(pot, startPoint, startVal, nextPoint, nextVal, &
-    & l_ang, energy, steps_tot, endPoint1, endVal1, endPoint2, endVal2, rsep_, sols)
+    & l_ang, energy, steps_tot, endPoint1, endVal1, endPoint2, endVal2, rsep_) !, sols)
         implicit none
         class(Potential_t), intent(in) :: pot
         real(rp), intent(in) :: startPoint, startVal, nextPoint, nextVal
@@ -29,11 +29,11 @@ contains
         real(rp) :: wprev, wcurr, wnext, ucurr, unext
         real(rp) :: fval, position, new_steps_tot
         !   real(rp), allocatable :: sols
-        real(rp), optional, allocatable, intent(out) :: sols(:)
+        ! real(rp), optional, allocatable, intent(out) :: sols(:)
 
         integer :: i
 
-        if (present(sols)) allocate (sols(steps_tot + 1))
+        ! if (present(sols)) allocate (sols(steps_tot + 1))
         rsep = pi/sqrt(energy)/pot%alpha
         if (present(rsep_)) rsep = rsep_
 
@@ -51,11 +51,11 @@ contains
             end if
             ! fval = radialRHS(pot, position, l_ang, energy)
             wprev = getW(startVal, fval, hstep_sq)
-            if (allocated(sols)) sols(1) = startVal
+            ! if (allocated(sols)) sols(1) = startVal
         end if
 
         ucurr = nextVal
-        if (allocated(sols)) sols(2) = nextVal
+        ! if (allocated(sols)) sols(2) = nextVal
         position = position + hstep
         fval = radialRHS(pot, position, l_ang, energy)
         wcurr = getW(ucurr, fval, hstep_sq)
@@ -69,7 +69,7 @@ contains
             ! print*, position
             fval = radialRHS(pot, position, l_ang, energy)
             ucurr = getU(wcurr, fval, hstep_sq)
-            if (allocated(sols)) sols(i + 1) = ucurr
+            ! if (allocated(sols)) sols(i + 1) = ucurr
         end do
         endVal1 = ucurr
         endPoint1 = position
