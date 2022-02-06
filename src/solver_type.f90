@@ -151,7 +151,8 @@ contains
     end subroutine json_get_helper_int
 
 
-    pure subroutine numerov_solver(this, l, energy, endPoint1, endVal1, endPoint2, endVal2, rsep_)
+    ! pure 
+    subroutine numerov_solver(this, l, energy, endPoint1, endVal1, endPoint2, endVal2, rsep_)
         !! wrapper function for the Numerov function below for use in the Solver
         !! type (OOP approach)
         !! this does not store the solution
@@ -175,10 +176,20 @@ contains
         h2fnext = h_sq * radialRHS(this%pot, this%start_r+this%rstep, l, energy)
         ! at r=-h
         h2fprev = h_sq * radialRHS(this%pot, this%start_r-this%rstep, l, energy)
+        ! I think I actually did wnext here?!
         nextVal = ((2_rp + 5*h2f/6)*(1_rp - h2fprev/12)*startVal &
         &         + 2*this%rstep*deriv*(1_rp - h2fprev)/6) &
         &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
         &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
+        ! nextVal = h2f*(1_rp-h2fprev/6) & ! this is completely wrong...
+        ! &         + 2*this%rstep*deriv*(1_rp-h2fprev/12) &
+        ! &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
+        ! &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
+        ! @todo ? maybe something is wrong with the nextVal calculation
+
+        ! print*,"phideriv", deriv
+        ! print*, "phi1, phi2"
+        ! print*, startVal, nextVal
 
         call numerov(this%pot, this%start_r, startVal, this%start_r+this%rstep,&
         &            nextVal, l, energy, maxI, endPoint1, endVal1, endPoint2, &
@@ -208,12 +219,12 @@ contains
         E_curr = this%minE
         ! TODO !!!
         E_loop: do while (E_curr <= this%maxE)
-            print*, "E", E_curr
-            print*, "r1,u1,r2,u2"
+            ! print*, "E", E_curr
+            ! print*, "r1,u1,r2,u2"
             sigma_tot = 0
             l_loop: do l=1,this%lmax
                 call this%numerov(l, E_curr, r1, u1, r2, u2)
-                print*, r1,u1,r2,u2
+                ! print*, r1,u1,r2,u2
                 ! TODO numerov values blow the fuck up
                 ! TODO numerov needs even more testing :(
                 sigma_tot = sigma_tot &
@@ -221,7 +232,7 @@ contains
                 ! print*, l
             end do l_loop
             E_curr = E_curr + dE
-            ! print*, E_curr, sigma_tot
+            print*, E_curr, sigma_tot
         end do E_loop
         ! print*, "stub"
     end subroutine

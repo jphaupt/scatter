@@ -1,4 +1,5 @@
 module potential_type
+    !! @todo !! remove rho from (almost) everything since we are measuring in terms of it!!!
     !! @todo separate different type to different files
     use precision, only: rp
     use constants, only: pi, hbar_sq
@@ -166,7 +167,8 @@ contains
         class(Potential_LennardJones_t), intent(in) :: this
         real(rp), intent(in) :: r
         real(rp) :: rho_r
-        rho_r = this%rho/r
+        ! rho_r = this%rho/r ! TODO we are measuring in units of rho=1
+        rho_r = 1/r
         retVal = this%epsilon*(rho_r**12 - 2*rho_r**6)
 
     end function potential_LennardJones
@@ -272,6 +274,7 @@ contains
         real(rp) :: delta, sdl, k2
         delta = calc_delta(this, l, energy, r1, r2, u1, u2)
         sdl = sin(delta)
+        ! print*, "tandelta", tan(delta)
         k2 = this%alpha*energy ! 2mE/hbar^2
         sigma_l = (2*l+1)*4*pi*sdl*sdl/k2 ! TODO Not totally surer about 2*l+1 !
         ! sigma_l = 4*pi*sdl*sdl/k2 ! TODO Not totally surer about 2*l+1 !

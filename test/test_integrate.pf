@@ -98,14 +98,14 @@ module test_integrate
     @test
     subroutine test_numerov_against_thijssen_LJ()
         ! tests my Numerov implementation against Thijssen's implementation
-        real(rp) :: energy=3.0
-        real(rp) :: hstep = 0.02, maxDist=4.0
+        real(rp) :: energy=0.1
+        real(rp) :: hstep = 0.02, maxDist=5.0
         integer :: secMaxI, maxI, l=0
         integer, parameter :: maxSol=60000 ! seems a tad high?? use allocatable arrays
         real(rp) :: r(maxSol), FArr(maxSol), phi1, phi2, solution(maxSol)
         real(rp) :: K
         real(rp) :: quartWave, secR
-        real(rp) :: startPt=0.0, startVal, nextVal, nextPt ! I think..
+        real(rp) :: startPt=0.75, startVal, nextVal, nextPt ! I think..
         real(rp) :: endpt1, endval1, endpt2, endval2
         integer :: i
         real(rp) :: phiend1, phiend2, r1_thij, r2_thij
@@ -135,7 +135,7 @@ module test_integrate
         ! print*, "phiend1", phiend1, startVal
         ! print*, "sol_thij", solution(1:maxI+1)
         ! print*, "sol_mine", sols
-        @assertEqual(r1_thij, endPt1, tolerance=1.e-8_rp)
+        @assertEqual(r1_thij, endPt1, tolerance=1.e-8_rp, message='failed r1')
         @assertEqual(phiend1, endVal1, tolerance=1.e-8_rp)
         @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
         @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
@@ -162,11 +162,13 @@ module test_integrate
 
 end function harmonicF
 pure elemental real(rp) function LJF(r, energy) result(V_eff)
+    ! l = 0
     implicit none
     real(rp), intent(in) :: r, energy
-    real(rp) :: alpha
+    real(rp) :: alpha, epsilon
     alpha = 6.1
-    V_eff = -1 ! TODO!
+    epsilon = 5.9
+    V_eff = alpha*epsilon*(1/r**12 - 2/r**6) - alpha*energy
     ! V_eff = L*(L+1)/R2 + RydConst*Epsilon*(1.D0/R12 - 2.D0/R6) - RydConst*Ener
 
 end function LJF
