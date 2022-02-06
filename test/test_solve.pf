@@ -1,0 +1,11 @@
+module test_solve
+    !! this is more like an integration test, as it involves solving the entire
+    !! problem and comparing it to a benchmark. I will modify this file to make
+    !! a regression test as well
+    use precision, only: rp
+    use constants, only: pi
+    use potential_type, only: Potential_t
+    implicit none
+contains
+    
+end module test_solve

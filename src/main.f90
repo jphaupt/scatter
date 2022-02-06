@@ -9,15 +9,19 @@ program loss_rate
     use json_module
     use precision
     use mpi_f08
-    use potential_type, only: Harmonic_Potential_t
+    use potential_type, only: Potential_Harmonic_t
+    use solver_type, only: Solver_t
     implicit none
     ! type(Potential_t) :: pot
-    type(Harmonic_Potential_t) :: pot
+    type(Solver_t) :: model
 
     ! todo read input parameters from json file
     ! for now, defaulting to some values inside Potential_t
     ! pot = Potential_t()
-    print*, pot%potential(5._rp)
+    model = Solver_t()
+    print*, "test"
+    ! print*, model%filename
+    ! print*, pot%potential(5._rp)
 
     contains
 

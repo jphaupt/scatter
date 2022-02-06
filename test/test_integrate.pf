@@ -1,5 +1,5 @@
 module test_integrate
-    use potential_type, only: Potential_t, Harmonic_Potential_t
+    use potential_type, only: Potential_t, Potential_Harmonic_t
     use integrate, only: numerov_thijssen, numerov
     use precision, only: rp
     use constants, only: pi
@@ -51,7 +51,7 @@ module test_integrate
     end subroutine test_assert_true_and_false
 
     @test
-    subroutine test_numerov_against_thijssen()
+    subroutine test_numerov_against_thijssen_harmonic()
         ! tests my Numerov implementation against Thijssen's implementation
         real(rp) :: energy=3.0
         real(rp) :: hstep = 0.02, maxDist=4.0
@@ -66,7 +66,8 @@ module test_integrate
         real(rp) :: A, tmp, rcurr
         real(rp), allocatable :: sols(:)
 
-        type(Harmonic_Potential_t) :: pot
+        type(Potential_Harmonic_t) :: pot
+        pot = Potential_Harmonic_t() ! constructor unnecessary in this case
         maxI = nint((maxDist-startPt)/hstep)
         K = sqrt(energy)
         quartWave = 0.5D0*PI/K
@@ -91,7 +92,7 @@ module test_integrate
         @assertEqual(phiend1, startVal, tolerance=1.e-8_rp)
         @assertEqual(r2_thij, nextPt, tolerance=1.e-8_rp, message='very last point')
         @assertEqual(phiend2, nextVal, tolerance=1.e-8_rp)
-    end subroutine
+    end subroutine test_numerov_against_thijssen_harmonic
 
     ! pure real(rp) function harmonic_sol(r,h) result(retval)
     ! real(rp), intent(in) :: r,h

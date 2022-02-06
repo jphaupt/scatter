@@ -5,6 +5,7 @@ add_library(
     special_functions.f90
     potential_type.f90
     integrate.f90
+    solver_type.f90
 )
 
 # not totally sure what these two do, but they are necessary for testing
