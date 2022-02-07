@@ -144,7 +144,7 @@ contains
         integer, intent(in) :: l
         real(rp), intent(in) :: r, energy
 
-        V_eff = pot%alpha*(pot%potential(r) - energy) + 1_rp*l*(l + 1._rp)/(r*r)
+        V_eff = pot%alpha*(pot%potential(r) - energy) + l*(l + 1._rp)/(r*r)
 
     end function radialRHS
 

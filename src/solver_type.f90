@@ -27,7 +27,7 @@ module solver_type
         procedure, pass(this) :: read_LennardJones
         procedure, pass(this) :: numerov => numerov_solver
         procedure, pass(this) :: calc_full_cross_section
-        ! no idea if you can do this (creates circular dependency as written)
+        procedure, pass(this) :: get_nextVal
 
     end type Solver_t
 
@@ -70,7 +70,7 @@ contains
         end if
         select case (trim(pot_name))
         case ("LennardJones")
-            print *, "Initialising LennardJones Potential!"
+            print *, "# Initialising LennardJones Potential!"
             call this%read_LennardJones(config)
         case default
             print *, "Potential type "//trim(pot_name)//" not yet implemented"
@@ -96,6 +96,7 @@ contains
         call json_get_helper(config, 'start_r', this%start_r)
         call json_get_helper(config, 'end_r', this%end_r)
         call json_get_helper(config, 'maxE', this%maxE)
+        call json_get_helper(config, 'rstep', this%rstep)
 
     end subroutine read_general
 
@@ -131,7 +132,7 @@ contains
         ! (I default to real64, they default to real32)
         call config%get(varname, var, found);
         if (.not. found) then
-            print *, "default values not yet enabled "//varname
+            print *, "# default values not yet enabled "//varname
             stop
         end if
     end subroutine json_get_helper_real
@@ -151,7 +152,7 @@ contains
     end subroutine json_get_helper_int
 
 
-    ! pure 
+    ! pure
     subroutine numerov_solver(this, l, energy, endPoint1, endVal1, endPoint2, endVal2, rsep_)
         !! wrapper function for the Numerov function below for use in the Solver
         !! type (OOP approach)
@@ -163,12 +164,14 @@ contains
         real(rp), intent(in) :: energy
         integer, intent(in) :: l
         real(rp) :: startVal, nextVal
-        real(rp) :: h_sq, h2f, h2fnext, h2fprev, deriv
+        real(rp) :: h_sq, h2f, h2fnext, h2fprev, deriv,a,b,c
         integer :: maxI
         maxI = nint((this%end_r-this%start_r)/this%rstep)
         startVal = this%pot%small_r_solution(this%start_r)
         ! nextVal complicated to get...
         ! see equations A.53 and A.54
+        nextVal = this%get_nextVal(l, energy, startVal)
+
         h_sq = this%rstep * this%rstep
         deriv = this%pot%small_r_derivative(this%start_r) ! at r=0
         h2f = h_sq * radialRHS(this%pot, this%start_r, l, energy) ! at r=0
@@ -176,26 +179,65 @@ contains
         h2fnext = h_sq * radialRHS(this%pot, this%start_r+this%rstep, l, energy)
         ! at r=-h
         h2fprev = h_sq * radialRHS(this%pot, this%start_r-this%rstep, l, energy)
-        ! I think I actually did wnext here?!
-        nextVal = ((2_rp + 5*h2f/6)*(1_rp - h2fprev/12)*startVal &
-        &         + 2*this%rstep*deriv*(1_rp - h2fprev)/6) &
-        &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
-        &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
-        ! nextVal = h2f*(1_rp-h2fprev/6) & ! this is completely wrong...
-        ! &         + 2*this%rstep*deriv*(1_rp-h2fprev/12) &
-        ! &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
-        ! &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
-        ! @todo ? maybe something is wrong with the nextVal calculation
+        ! A.52 ... :/
+        ! I think there might be a problem re: integer divisions...
+        ! 5_rp = integer with precision rp, NOT real
+        ! nextVal = ((2_rp + 5_rp*h2f/6_rp)*(1_rp - h2fprev/6_rp)*startVal &
+        ! &         + 2_rp*this%rstep*deriv*(1_rp - h2fprev)/12_rp) &
+        ! &       / ((1_rp - h2fnext/12_rp)*(1_rp - h2fprev/6_rp) &
+        ! &        + (1_rp - h2fprev/12_rp)*(1_rp - h2fnext/6_rp))
+
+        a = h2fnext/12
+        b = h2fprev/12
+        c = (2._rp + 5._rp /6._rp *h2f)*startval
+        nextVal = 2*this%rstep*deriv*(1-b)+c*(1-2*b)
+        nextVal = nextVal/((1-2*a)*(1-b)+(1-a)*(1-2*b))
 
         ! print*,"phideriv", deriv
-        ! print*, "phi1, phi2"
-        ! print*, startVal, nextVal
+        ! still something wrong with nextVal I think
+        print*, "phi1, phi2 (new)"
+        print*, startVal, nextVal
 
         call numerov(this%pot, this%start_r, startVal, this%start_r+this%rstep,&
         &            nextVal, l, energy, maxI, endPoint1, endVal1, endPoint2, &
         &            endVal2, rsep_=this%pot%get_wavelength(energy)/4_rp)
 
     end subroutine numerov_solver
+
+    real(rp) function get_nextVal(this, l, energy, startVal) result(nextVal)
+        class(Solver_t), intent(in) :: this
+        real(rp), intent(in) :: energy, startval
+        integer, intent(in) :: l
+        real(rp) :: h_sq, deriv, h2f, h2fnext, h2fprev
+
+        h_sq = this%rstep * this%rstep
+        deriv = this%pot%small_r_derivative(this%start_r) ! at r=0
+        h2f = h_sq * radialRHS(this%pot, this%start_r, l, energy) ! at r=0
+        ! at r=h
+        h2fnext = h_sq * radialRHS(this%pot, this%start_r+this%rstep, l, energy)
+        ! at r=-h
+        h2fprev = h_sq * radialRHS(this%pot, this%start_r-this%rstep, l, energy)
+        ! print*, "Fplus, Fminus, F0"
+        ! print*, radialRHS(this%pot, this%start_r+this%rstep, l, energy), &
+        ! &    radialRHS(this%pot, this%start_r-this%rstep, l, energy), &
+        ! &    radialRHS(this%pot, this%start_r, l, energy)
+        ! print*, "(2_rp + 5*h2f/6)*startVal,h2fnext,h2fprev"
+        ! print*, (2_rp + 5*h2f/6)*startVal,h2fnext,h2fprev ! these values are fine
+        ! print F (radialrhs), those should be basically the same
+        ! I think I actually did wnext here?!
+        ! TODO I think my nextval is incorrect but not 100% sure
+        ! the formula in the book is wrong. The right one comes from
+        ! A.52 ... :/
+        ! nextVal = ((2_rp + 5_rp*h2f/6_rp)*(1_rp - h2fprev/6_rp)*startVal &
+        ! &         + 2_rp*this%rstep*deriv*(1_rp - h2fprev)/12_rp) &
+        ! &       / ((1_rp - h2fnext/12_rp)*(1_rp - h2fprev/6_rp) &
+        ! &        + (1_rp - h2fprev/12_rp)*(1_rp - h2fnext/6_rp))
+        ! nextVal = h2f*(1_rp-h2fprev/6) & ! this is completely wrong...
+        ! &         + 2*this%rstep*deriv*(1_rp-h2fprev/12) &
+        ! &       / ((1_rp - h2fnext/12)*(1_rp - h2fprev/6) &
+        ! &        + (1_rp - h2fprev/12)*(1_rp - h2fnext/6))
+        ! @todo ? maybe something is wrong with the nextVal calculation
+    end function get_nextVal
 
     subroutine calc_full_cross_section(this)
         !! calculates the full cross section given all the parameters in Solver
@@ -206,33 +248,22 @@ contains
         real(rp) :: E_curr, dE, sigma_tot
         integer :: l
         real(rp) :: r1, r2, u1, u2
-        !! @todo
-        !! for some reason, numE is zero here, looks like the default doesn't work
-        !! properly...
-        !! same thing with lmax
-        !! @endtodo
         dE = (this%maxE - this%minE)/this%numE
-        ! print*, this%maxE
-        ! print*, this%minE
-        ! print*, this%numE
-        ! print*, dE
         E_curr = this%minE
-        ! TODO !!!
         E_loop: do while (E_curr <= this%maxE)
             ! print*, "E", E_curr
             ! print*, "r1,u1,r2,u2"
             sigma_tot = 0
-            l_loop: do l=1,this%lmax
+            l_loop: do l=0,this%lmax
                 call this%numerov(l, E_curr, r1, u1, r2, u2)
+                ! print*, "r1,u1,r2,u2"
                 ! print*, r1,u1,r2,u2
-                ! TODO numerov values blow the fuck up
-                ! TODO numerov needs even more testing :(
                 sigma_tot = sigma_tot &
                 &   + this%pot%partial_cross_section(l, E_curr, r1, r2, u1, u2)
                 ! print*, l
             end do l_loop
-            E_curr = E_curr + dE
             print*, E_curr, sigma_tot
+            E_curr = E_curr + dE
         end do E_loop
         ! print*, "stub"
     end subroutine

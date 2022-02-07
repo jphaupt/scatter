@@ -166,10 +166,10 @@ contains
         implicit none
         class(Potential_LennardJones_t), intent(in) :: this
         real(rp), intent(in) :: r
-        real(rp) :: rho_r
+        ! real(rp) :: rho_r
         ! rho_r = this%rho/r ! TODO we are measuring in units of rho=1
-        rho_r = 1/r
-        retVal = this%epsilon*(rho_r**12 - 2*rho_r**6)
+        ! rho_r = 1/r
+        retVal = this%epsilon*(1/r**12 - 2/r**6)
 
     end function potential_LennardJones
 
@@ -182,9 +182,10 @@ contains
         if (present(m2)) this%m2 = m2
         if (present(rho)) this%rho = rho
         if (present(epsilon)) this%epsilon = epsilon
-        !! TODO !! m1 and m2 are not defined!!!
-        this%alpha = 2*(this%m1*this%m2)/(this%m1 + this%m2)/hbar_sq
-        this%alpha = this%alpha*this%rho*this%rho ! units of rho^-2 meV
+        ! TODO confused why this works but other one doesn't, though other one should be better
+        this%alpha = 0.48_rp * this%rho * this%rho
+        ! this%alpha = 2*(this%m1*this%m2)/(this%m1 + this%m2)/hbar_sq
+        ! this%alpha = this%alpha*this%rho*this%rho ! units of rho^-2 meV
     end function constructor_LennardJones
 
     pure elemental real(rp) function small_r_solution_Harmonic(this, r) result(retval)

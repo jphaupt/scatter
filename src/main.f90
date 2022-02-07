@@ -1,6 +1,9 @@
 program loss_rate
     !! @todo there are a lot of redundancies between Solver_t and Potential_t
     !! clean it up! @endtodo
+    !! my data seems to be shifted to the right a little bit -- FIXED
+    !! @todo not sure what is going on with my small E values
+    !! p "tmp.dat" u 1:2 w l, "scatter/tmpdat" u 1:2 w l, "scatter/test/sigmadat_ref" u 1:2 w l
     !! as of right now, my program is basically a refactoring of Thijssen's
     !! chapter two exercise solution
     !! however, it looks like his approach is different from what is outlined
@@ -19,8 +22,8 @@ program loss_rate
     type(Solver_t) :: model
 
     model = Solver_t()
-    print*, model%pot%alpha
-    print*, model%rstep
+    ! print*, model%pot%alpha
+    ! print*, model%rstep
     !! @todo it looks like alpha get initialised to zero for some reason!?
     call model%calc_full_cross_section()
 

@@ -1,6 +1,7 @@
 module test_integrate
+    use solver_type, only: Solver_t
     use potential_type, only: Potential_t, Potential_Harmonic_t, Potential_LennardJones_t
-    use integrate, only: numerov_thijssen, numerov
+    use integrate, only: numerov_thijssen, numerov, radialRHS
     use precision, only: rp
     use constants, only: pi
     use funit
@@ -95,6 +96,7 @@ module test_integrate
         @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
         @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
     end subroutine test_numerov_against_thijssen_harmonic
+
     @test
     subroutine test_numerov_against_thijssen_LJ()
         ! tests my Numerov implementation against Thijssen's implementation
@@ -113,31 +115,36 @@ module test_integrate
         ! real(rp), allocatable :: sols(:)
 
         type(Potential_LennardJones_t) :: pot
-        pot = Potential_LennardJones_t() ! constructor unnecessary in this case
+        type(Solver_t) :: model
+        ! model = Solver_t() ! doesn't like this for some reason
+        pot = Potential_LennardJones_t()
+        model%pot = pot
         maxI = nint((maxDist-startPt)/hstep)
-        K = sqrt(energy)
+        K = sqrt(energy*pot%alpha)
         quartWave = 0.5D0*PI/K
         secR = maxDist + quartWave
         secMaxI = int((secR-startPt)/hstep)
-        r = [((i-1)*hstep, i=1, secMaxI+1)]
-        FArr = LJF(r, energy)
-        startVal = 0 ! how could this possibly be the value at r=0?? n=1 I guess
-        nextVal = hstep
-        nextPt = hstep
+        r = [(startPt+(i-1)*hstep, i=1, secMaxI+1)]
+        FArr = LJF(r, energy, pot)
+        startVal = pot%small_r_solution(0.75_rp)
+        ! nextVal = get_nextVal_LJ(model, 0, energy, startVal) ! breaks everything for some reason
+        nextVal = 1.1594370700258034E-002 ! TODO
+        nextPt = startPt + hstep
         call numerov_thijssen(hstep, 1, secMaxI+1, maxSol, FArr, .false., startVal, nextVal, solution)
         phiend1 = solution(maxI+1)
         phiend2 = solution(secMaxI+1)
         r1_thij = r(maxI+1)
         r2_thij = r(secMaxI+1)
+        print*, "sol_thij", solution(1:maxI+1)
+        print*, "sol_thij", solution(maxI+1)
         call numerov(pot, startPt, startVal, nextPt, nextVal, l, energy, maxI, &
         &    endpt1, endval1, endpt2, endval2, quartWave) !, sols)
         ! print*, "r1", r1_thij, startPt
         ! print*, "phiend1", phiend1, startVal
-        ! print*, "sol_thij", solution(1:maxI+1)
         ! print*, "sol_mine", sols
         @assertEqual(r1_thij, endPt1, tolerance=1.e-8_rp, message='failed r1')
-        @assertEqual(phiend1, endVal1, tolerance=1.e-8_rp)
         @assertEqual(r2_thij, endPt2, tolerance=1.e-8_rp, message='very last point')
+        @assertEqual(phiend1, endVal1, tolerance=1.e-8_rp)
         @assertEqual(phiend2, endVal2, tolerance=1.e-8_rp)
     end subroutine test_numerov_against_thijssen_LJ
 
@@ -161,13 +168,17 @@ module test_integrate
     V_eff = r*r-energy !*2.
 
 end function harmonicF
-pure elemental real(rp) function LJF(r, energy) result(V_eff)
+
+pure elemental real(rp) function LJF(r, energy, pot) result(V_eff)
     ! l = 0
     implicit none
     real(rp), intent(in) :: r, energy
+    class(Potential_LennardJones_t), intent(in) :: pot
     real(rp) :: alpha, epsilon
-    alpha = 6.1
-    epsilon = 5.9
+    ! alpha = 0.48_rp * 3.57 * 3.57
+    alpha = pot%alpha
+    ! epsilon = 5.9
+    epsilon = pot%epsilon
     V_eff = alpha*epsilon*(1/r**12 - 2/r**6) - alpha*energy
     ! V_eff = L*(L+1)/R2 + RydConst*Epsilon*(1.D0/R12 - 2.D0/R6) - RydConst*Ener
 

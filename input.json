@@ -1,13 +1,14 @@
 {
     "potential_name":"LennardJones",
-    "numE":100,
-    "lmax":20,
-    "minE":0.3,
-    "maxE":5.0,
+    "numE":2,
+    "lmax":12,
+    "minE":0.1,
+    "maxE":3.5,
     "start_r":0.75,
     "end_r":5.0,
     "m1":1.008,
     "m2":83.798,
     "epsilon":5.9,
-    "rho":3.57
+    "rho":3.57,
+    "rstep":0.02
 }
